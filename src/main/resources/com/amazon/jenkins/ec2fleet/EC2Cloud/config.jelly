@@ -1,0 +1,38 @@
+<?jelly escape-by-default='true'?>
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler"
+         xmlns:d="jelly:define" xmlns:l="/lib/layout"
+         xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+
+  <f:section title="${%Spot Fleet Configuration}">
+    <f:entry title="${%Use EC2 instance profile to obtain credentials}" field="useInstanceProfileForCredentials">
+      <f:checkbox />
+    </f:entry>
+
+    <f:entry title="${%Access Key ID}" field="accessId">
+      <f:textbox />
+    </f:entry>
+    <f:entry title="${%Secret Access Key}" field="secretKey">
+      <f:password />
+    </f:entry>
+    <f:description>The regions will be populated once the keys above are entered.
+    </f:description>
+    <f:entry title="${%Region}" field="region">
+      <f:select/>
+    </f:entry>
+    <f:description>Fleet list will be available once the connection is validated
+    </f:description>
+    <f:entry title="${%Spot Fleet}" field="fleet">
+      <f:select/>
+    </f:entry>
+    <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
+      <f:number clazz="positive-number"/>
+    </f:entry>
+    <f:entry title="${%Maximum Cluster Size}" field="maxSize">
+      <f:number clazz="required positive-number"/>
+    </f:entry>
+
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="useInstanceProfileForCredentials,accessId,secretKey,region,fleet" />
+  </f:section>
+
+</j:jelly>
