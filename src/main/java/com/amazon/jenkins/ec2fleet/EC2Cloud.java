@@ -41,6 +41,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * User: cyberax
@@ -57,6 +59,7 @@ public class EC2Cloud extends Cloud
     private final String secretKey;
     private final String region;
     private final String fleet;
+    private final String label;
     private final Integer idleMinutes;
     private final Integer maxSize;
     private @Nonnull FleetStateStats status;
@@ -66,16 +69,19 @@ public class EC2Cloud extends Cloud
     private final Set<String> instancesSeen = new HashSet<String>();
     private final Set<String> instancesDying = new HashSet<String>();
 
+    private static final Logger LOGGER = Logger.getLogger(EC2Cloud.class.getName());
+
     @DataBoundConstructor
     public EC2Cloud(final boolean useInstanceProfileForCredentials, final String accessId,
                     final String secretKey, final String region, final String fleet,
-                    final Integer idleMinutes, final Integer maxSize) {
+                    final String label, final Integer idleMinutes, final Integer maxSize) {
         super(FLEET_CLOUD_ID);
         this.useInstanceProfileForCredentials = useInstanceProfileForCredentials;
         this.accessId = accessId;
         this.secretKey = secretKey;
         this.region = region;
         this.fleet = fleet;
+        this.label = label;
         this.idleMinutes = idleMinutes;
         this.maxSize = maxSize;
 
@@ -100,6 +106,10 @@ public class EC2Cloud extends Cloud
 
     public String getFleet() {
         return fleet;
+    }
+
+    public String getLabel(){
+        return label;
     }
 
     public Integer getIdleMinutes() {
@@ -147,19 +157,41 @@ public class EC2Cloud extends Cloud
         final AmazonEC2 ec2=connect(useInstanceProfileForCredentials, accessId, secretKey, region);
         final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
         status = curStatus;
+        LOGGER.log(Level.FINE, "Fleet Update Status called");
+        LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
 
         // Now update the possible new Swarm nodes
         for(final Node node : Jenkins.getInstance().getNodes()) {
-            if (!(node instanceof SwarmSlave))
+            if (!(node instanceof SwarmSlave)){
+                LOGGER.log(Level.FINE, "Node was not a swarm slave, is type: " + node.getClass().getName());
                 continue;
+            }
 
-            final String nodeId=node.getDisplayName();
+            // Split labels and find instance ID
+            final String[] labels = node.getLabelString().split(" ");
+            String nodeId = null;
+            for(String str: labels){
+                if(str.startsWith("i-")){
+                    nodeId = str;
+                }
+            }
+            
+            // Check to make sure instanceID is part of label
+            if (nodeId.equals(null)){
+                LOGGER.log(Level.INFO, "Node " + node.getDisplayName(), " does not have proper labels");
+                continue;
+            }
+            
             // Check if this is a node from our cluster
-            if (!curStatus.getInstances().contains(nodeId))
+            if (!curStatus.getInstances().contains(nodeId)){
+                LOGGER.log(Level.INFO, "Node was not part of our cluster:");
                 continue;
+            }
             // Check for old nodes
-            if (instancesSeen.contains(nodeId) || instancesDying.contains(nodeId))
+            if (instancesSeen.contains(nodeId) || instancesDying.contains(nodeId)){
+                LOGGER.log(Level.INFO, "Node was too old or dying");
                 continue;
+            }
 
             //A new node, wheee!
             instancesSeen.add(nodeId);
@@ -173,6 +205,7 @@ public class EC2Cloud extends Cloud
 
             // Initialize our retention strategy
             if (getIdleMinutes() != null) {
+                LOGGER.log(Level.FINE, "Adding policy to node");
                 ((SwarmSlave) node).setRetentionStrategy(
                         new IdleRetentionStrategy(getIdleMinutes(), this));
             }
@@ -182,6 +215,7 @@ public class EC2Cloud extends Cloud
     }
 
     public synchronized void terminateInstance(final String instanceId) {
+        LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
         if (!instancesSeen.contains(instanceId) || instancesDying.contains(instanceId))
             throw new IllegalStateException("Unknown instance terminated: " + instanceId);
 
@@ -206,7 +240,8 @@ public class EC2Cloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        return fleet != null;
+        LOGGER.log(Level.FINE, "CanProvision called on fleet:" + this.label + " wanting:" + label.getName());
+        return fleet != null && this.label.equals(label.getName());
     }
 
     private static AmazonEC2 connect(final boolean useInstanceProfileForCredentials,
@@ -224,6 +259,7 @@ public class EC2Cloud extends Cloud
             client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
         return client;
     }
+
 
     @Extension
     @SuppressWarnings("unused")
