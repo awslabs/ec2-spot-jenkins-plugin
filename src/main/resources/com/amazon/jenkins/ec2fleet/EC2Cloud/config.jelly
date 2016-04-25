@@ -25,6 +25,9 @@
     <f:entry title="${%Spot Fleet}" field="fleet">
       <f:select/>
     </f:entry>
+    <f:entry title="${%Label}" field="label">
+      <f:textbox />
+    </f:entry>
     <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
       <f:number clazz="positive-number"/>
     </f:entry>
