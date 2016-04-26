@@ -1,10 +1,8 @@
 package com.amazon.jenkins.ec2fleet;
 
 import hudson.Extension;
-import hudson.model.Hudson;
 import hudson.model.PeriodicWork;
 import hudson.slaves.Cloud;
-import hudson.slaves.NodeProvisioner;
 import hudson.widgets.Widget;
 import jenkins.model.Jenkins;
 
@@ -30,11 +28,11 @@ public class CloudNanny extends PeriodicWork
 
         final List<FleetStateStats> stats = new ArrayList<FleetStateStats>();
         for(final Cloud cloud : Jenkins.getInstance().clouds) {
-            if (!(cloud instanceof EC2Cloud))
+            if (!(cloud instanceof EC2FleetCloud))
                 continue;
 
             // Update the cluster states
-            final EC2Cloud fleetCloud =(EC2Cloud) cloud;
+            final EC2FleetCloud fleetCloud =(EC2FleetCloud) cloud;
             stats.add(fleetCloud.updateStatus());
         }
 

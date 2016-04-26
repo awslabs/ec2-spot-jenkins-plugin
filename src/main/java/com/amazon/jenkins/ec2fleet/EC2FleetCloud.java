@@ -1,16 +1,19 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.cloud.FleetNode;
 import com.amazonaws.auth.AWSCredentialsProvider;
 import com.amazonaws.auth.BasicAWSCredentials;
 import com.amazonaws.auth.InstanceProfileCredentialsProvider;
 import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeRegionsResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
-import com.amazonaws.services.ec2.model.ExcessCapacityTerminationPolicy;
+import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
@@ -20,8 +23,9 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
-import hudson.plugins.swarm.SwarmSlave;
+import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
+import hudson.slaves.NodeProperty;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -35,12 +39,18 @@ import org.springframework.util.ObjectUtils;
 import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.LogRecord;
+import java.util.logging.Logger;
+import java.util.logging.SimpleFormatter;
 
 /**
  * User: cyberax
@@ -48,15 +58,19 @@ import java.util.Set;
  * Time: 22:22
  */
 @SuppressWarnings("unused")
-public class EC2Cloud extends Cloud
+public class EC2FleetCloud extends Cloud
 {
     public static final String FLEET_CLOUD_ID="FleetCloud";
+    private static final SimpleFormatter sf = new SimpleFormatter();
 
     private final boolean useInstanceProfileForCredentials;
     private final String accessId;
     private final String secretKey;
     private final String region;
     private final String fleet;
+    private final String userName;
+    private final String privateKey;
+    private final boolean privateIpUsed;
     private final Integer idleMinutes;
     private final Integer maxSize;
     private @Nonnull FleetStateStats status;
@@ -67,16 +81,21 @@ public class EC2Cloud extends Cloud
     private final Set<String> instancesDying = new HashSet<String>();
 
     @DataBoundConstructor
-    public EC2Cloud(final boolean useInstanceProfileForCredentials, final String accessId,
-                    final String secretKey, final String region, final String fleet,
-                    final Integer idleMinutes, final Integer maxSize) {
+    public EC2FleetCloud(final boolean useInstanceProfileForCredentials, final String accessId,
+                         final String secretKey, final String region, final String fleet,
+                         final String userName, final String privateKey,
+                         final boolean privateIpUsed,
+                         final Integer idleMinutes, final Integer maxSize) {
         super(FLEET_CLOUD_ID);
         this.useInstanceProfileForCredentials = useInstanceProfileForCredentials;
         this.accessId = accessId;
         this.secretKey = secretKey;
         this.region = region;
         this.fleet = fleet;
+        this.userName = userName;
+        this.privateKey = privateKey;
         this.idleMinutes = idleMinutes;
+        this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
 
         this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet());
@@ -102,6 +121,14 @@ public class EC2Cloud extends Cloud
         return fleet;
     }
 
+    public String getUserName() { return userName; }
+
+    public String getPrivateKey() { return privateKey; }
+
+    public boolean isPrivateIpUsed() {
+        return privateIpUsed;
+    }
+
     public Integer getIdleMinutes() {
         return idleMinutes;
     }
@@ -110,8 +137,29 @@ public class EC2Cloud extends Cloud
         return maxSize;
     }
 
+    public String getJvmSettings() {
+        return "";
+    }
+
     public @Nonnull FleetStateStats getStatus() {
         return status;
+    }
+
+    public static void log(final Logger logger, final Level level,
+                           final TaskListener listener, final String message) {
+        log(logger, level, listener, message, null);
+    }
+
+    public static void log(final Logger logger, final Level level,
+                           final TaskListener listener, String message, final Throwable exception) {
+        logger.log(level, message, exception);
+        if (listener != null) {
+            if (exception != null)
+                message += " Exception: " + exception;
+            final LogRecord lr = new LogRecord(level, message);
+            final PrintStream printStream = listener.getLogger();
+            printStream.print(sf.format(lr));
+        }
     }
 
     @Override public synchronized Collection<NodeProvisioner.PlannedNode> provision(
@@ -148,37 +196,80 @@ public class EC2Cloud extends Cloud
         final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
         status = curStatus;
 
-        // Now update the possible new Swarm nodes
+        // Check the nodes to see if we have some new ones
+        final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
+        final Set<String> jenkinsInstances = new HashSet<String>();
         for(final Node node : Jenkins.getInstance().getNodes()) {
-            if (!(node instanceof SwarmSlave))
-                continue;
+            newInstances.remove(node.getDisplayName());
+            jenkinsInstances.add(node.getDisplayName());
+        }
+        newInstances.removeAll(instancesSeen);
+        newInstances.removeAll(instancesDying);
 
-            final String nodeId=node.getDisplayName();
-            // Check if this is a node from our cluster
-            if (!curStatus.getInstances().contains(nodeId))
-                continue;
-            // Check for old nodes
-            if (instancesSeen.contains(nodeId) || instancesDying.contains(nodeId))
-                continue;
-
-            //A new node, wheee!
-            instancesSeen.add(nodeId);
-            if (!plannedNodes.isEmpty())
-            {
-                //If we're waiting for a new node - mark it as ready
-                final NodeProvisioner.PlannedNode curNode=plannedNodes.iterator().next();
-                plannedNodes.remove(curNode);
-                ((SettableFuture<Node>)curNode.future).set(node);
+        // Instance unknown to Jenkins but known to Fleet. Terminate it.
+        for(final String instId : instancesSeen) {
+            if (!instancesDying.contains(instId) &&
+                    !jenkinsInstances.contains(instId)) {
+                // Use a nuclear option to terminate an unknown instance
+                ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
             }
+        }
 
-            // Initialize our retention strategy
-            if (getIdleMinutes() != null) {
-                ((SwarmSlave) node).setRetentionStrategy(
-                        new IdleRetentionStrategy(getIdleMinutes(), this));
+        // If we have new instances - create nodes for them!
+        for(final String instanceId : newInstances) {
+            try {
+                addNewSlave(ec2, instanceId);
+            } catch(final Exception ex) {
+                throw new IllegalStateException(ex);
             }
         }
 
         return curStatus;
+    }
+
+    private void addNewSlave(final AmazonEC2 ec2, final String instanceId) throws Exception {
+        // Generate a random FS root
+        final String fsRoot = "/tmp/jenkins-"+UUID.randomUUID().toString().substring(0, 8);
+
+        final DescribeInstancesResult result=ec2.describeInstances(
+                new DescribeInstancesRequest().withInstanceIds(instanceId));
+        if (result.getReservations().isEmpty()) //Can't find this instance, skip it
+            return;
+        final Instance instance=result.getReservations().get(0).getInstances().get(0);
+        final String address = isPrivateIpUsed() ?
+                instance.getPrivateIpAddress() : instance.getPublicIpAddress();
+
+        // Check if we have the address to use. Nodes don't get it immediately.
+        if (address == null)
+            return; // Wait some more...
+
+        final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
+                fsRoot, "1", Node.Mode.NORMAL, "ec2-fleet", new ArrayList<NodeProperty<?>>(),
+                address, FLEET_CLOUD_ID);
+
+        // Initialize our retention strategy
+        if (getIdleMinutes() != null)
+            slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
+
+        final Jenkins jenkins=Jenkins.getInstance();
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (jenkins) {
+            // Try to avoid duplicate nodes
+            final Node n = jenkins.getNode(name);
+            if (n != null)
+                jenkins.removeNode(n);
+            jenkins.addNode(slave);
+        }
+
+        //A new node, wheee!
+        instancesSeen.add(instanceId);
+        if (!plannedNodes.isEmpty())
+        {
+            //If we're waiting for a new node - mark it as ready
+            final NodeProvisioner.PlannedNode curNode=plannedNodes.iterator().next();
+            plannedNodes.remove(curNode);
+            ((SettableFuture<Node>)curNode.future).set(slave);
+        }
     }
 
     public synchronized void terminateInstance(final String instanceId) {
@@ -233,6 +324,9 @@ public class EC2Cloud extends Cloud
         public String secretKey;
         public String region;
         public String fleet;
+        public String userName="root";
+        public boolean privateIpUsed;
+        public String privateKey;
 
         public DescriptorImpl() {
             super();
