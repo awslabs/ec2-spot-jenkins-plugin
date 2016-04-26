@@ -53,17 +53,6 @@
       <artifactId>aws-java-sdk</artifactId>
       <version>1.10.40</version>
     </dependency>
-    <dependency>
-      <groupId>com.google.guava</groupId>
-      <artifactId>guava</artifactId>
-      <version>14.0</version>
-    </dependency>
-
-    <dependency>
-      <groupId>org.apache.httpcomponents</groupId>
-      <artifactId>httpcore</artifactId>
-      <version>4.4</version>
-    </dependency>
-</dependencies>
+  </dependencies>
 
 </project>
