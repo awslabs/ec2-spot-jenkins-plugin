@@ -199,7 +199,7 @@ public class EC2FleetCloud extends Cloud
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
         final Set<String> jenkinsInstances = new HashSet<String>();
-        for(final Node node : Jenkins.getInstance().getNodes()) {
+        for(final Node node : Jenkins.getActiveInstance().getNodes()) {
             newInstances.remove(node.getDisplayName());
             jenkinsInstances.add(node.getDisplayName());
         }
@@ -251,7 +251,7 @@ public class EC2FleetCloud extends Cloud
         if (getIdleMinutes() != null)
             slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
 
-        final Jenkins jenkins=Jenkins.getInstance();
+        final Jenkins jenkins=Jenkins.getActiveInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (jenkins) {
             // Try to avoid duplicate nodes

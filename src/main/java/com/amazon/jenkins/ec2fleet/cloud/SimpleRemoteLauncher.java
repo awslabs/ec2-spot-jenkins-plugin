@@ -57,7 +57,7 @@ public class SimpleRemoteLauncher extends ComputerLauncher
         final Slave node=computer.getNode();
         if(node!=null) {
             try {
-                Jenkins.getInstance().removeNode(node);
+                Jenkins.getActiveInstance().removeNode(node);
             } catch(final IOException e) {
                 e.printStackTrace(listener.error(e.getMessage()));
             }
@@ -124,7 +124,7 @@ public class SimpleRemoteLauncher extends ComputerLauncher
             }
 
             logInfo(computer, listener, "Copying slave.jar");
-            scp.put(Jenkins.getInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
+            scp.put(Jenkins.getActiveInstance().getJnlpJars("slave.jar").readFully(), "slave.jar", tmpDir);
 
             final String jvmopts = cloud.getJvmSettings();
             final String launchString = "java " + (jvmopts != null ? jvmopts : "") + " -jar " + tmpDir + "/slave.jar";
@@ -169,7 +169,7 @@ public class SimpleRemoteLauncher extends ComputerLauncher
                 logInfo(computer, listener, "Connecting to " + address + " on port 22, with timeout " + slaveConnectTimeout
                         + ".");
                 final Connection conn = new Connection(address, 22);
-                final ProxyConfiguration proxyConfig = Jenkins.getInstance().proxy;
+                final ProxyConfiguration proxyConfig = Jenkins.getActiveInstance().proxy;
                 final Proxy proxy = proxyConfig == null ? Proxy.NO_PROXY : proxyConfig.createProxy(address);
                 if (!proxy.equals(Proxy.NO_PROXY) && proxy.address() instanceof InetSocketAddress) {
                     final InetSocketAddress address = (InetSocketAddress) proxy.address();

@@ -55,7 +55,7 @@ public class FleetNode extends Slave implements EphemeralNode
     }
 
     public EC2FleetCloud getCloud() {
-        return (EC2FleetCloud) Jenkins.getInstance().getCloud(cloudName);
+        return (EC2FleetCloud) Jenkins.getActiveInstance().getCloud(cloudName);
     }
 
     @Extension

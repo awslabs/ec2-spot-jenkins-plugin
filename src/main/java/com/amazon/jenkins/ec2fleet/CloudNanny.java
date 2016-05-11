@@ -24,10 +24,10 @@ public class CloudNanny extends PeriodicWork
 
     @Override protected void doRun() throws Exception {
         // Trigger reprovisioning as well
-        Jenkins.getInstance().unlabeledNodeProvisioner.suggestReviewNow();
+        Jenkins.getActiveInstance().unlabeledNodeProvisioner.suggestReviewNow();
 
         final List<FleetStateStats> stats = new ArrayList<FleetStateStats>();
-        for(final Cloud cloud : Jenkins.getInstance().clouds) {
+        for(final Cloud cloud : Jenkins.getActiveInstance().clouds) {
             if (!(cloud instanceof EC2FleetCloud))
                 continue;
 
