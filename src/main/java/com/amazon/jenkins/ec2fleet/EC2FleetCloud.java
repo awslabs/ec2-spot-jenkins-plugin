@@ -18,12 +18,18 @@ import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
+import com.cloudbees.plugins.credentials.CredentialsMatchers;
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.TaskListener;
+import hudson.security.ACL;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodeProvisioner;
@@ -63,9 +69,7 @@ public class EC2FleetCloud extends Cloud
     public static final String FLEET_CLOUD_ID="FleetCloud";
     private static final SimpleFormatter sf = new SimpleFormatter();
 
-    private final boolean useInstanceProfileForCredentials;
-    private final String accessId;
-    private final String secretKey;
+    private final String credentialsId;
     private final String region;
     private final String fleet;
     private final String userName;
@@ -81,15 +85,13 @@ public class EC2FleetCloud extends Cloud
     private final Set<String> instancesDying = new HashSet<String>();
 
     @DataBoundConstructor
-    public EC2FleetCloud(final boolean useInstanceProfileForCredentials, final String accessId,
-                         final String secretKey, final String region, final String fleet,
+    public EC2FleetCloud(final String credentialsId,
+                         final String region, final String fleet,
                          final String userName, final String privateKey,
                          final boolean privateIpUsed,
                          final Integer idleMinutes, final Integer maxSize) {
         super(FLEET_CLOUD_ID);
-        this.useInstanceProfileForCredentials = useInstanceProfileForCredentials;
-        this.accessId = accessId;
-        this.secretKey = secretKey;
+        this.credentialsId = credentialsId;
         this.region = region;
         this.fleet = fleet;
         this.userName = userName;
@@ -101,16 +103,8 @@ public class EC2FleetCloud extends Cloud
         this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet());
     }
 
-    public boolean isUseInstanceProfileForCredentials() {
-        return useInstanceProfileForCredentials;
-    }
-
-    public String getAccessId() {
-        return accessId;
-    }
-
-    public String getSecretKey() {
-        return secretKey;
+    public String getCredentialsId() {
+        return credentialsId;
     }
 
     public String getRegion() {
@@ -175,7 +169,7 @@ public class EC2FleetCloud extends Cloud
         request.setSpotFleetRequestId(fleet);
         request.setTargetCapacity(stats.getNumDesired() + excessWorkload);
 
-        final AmazonEC2 ec2=connect(useInstanceProfileForCredentials, accessId, secretKey, region);
+        final AmazonEC2 ec2=connect(credentialsId, region);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList =
@@ -192,7 +186,7 @@ public class EC2FleetCloud extends Cloud
     }
 
     public synchronized FleetStateStats updateStatus() {
-        final AmazonEC2 ec2=connect(useInstanceProfileForCredentials, accessId, secretKey, region);
+        final AmazonEC2 ec2=connect(credentialsId, region);
         final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
         status = curStatus;
 
@@ -281,7 +275,7 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() == 1 || !"active".equals(stats.getState()))
             return;
 
-        final AmazonEC2 ec2=connect(useInstanceProfileForCredentials, accessId, secretKey, region);
+        final AmazonEC2 ec2 = connect(credentialsId, region);
 
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
@@ -300,17 +294,13 @@ public class EC2FleetCloud extends Cloud
         return fleet != null;
     }
 
-    private static AmazonEC2 connect(final boolean useInstanceProfileForCredentials,
-            final String accessId, final String secretKey, final String region) {
+    private static AmazonEC2 connect(final String credentialsId, final String region) {
 
-        final AWSCredentialsProvider provider;
-        if (useInstanceProfileForCredentials) {
-            provider = new InstanceProfileCredentialsProvider();
-        } else {
-            provider=new StaticCredentialsProvider(new BasicAWSCredentials(accessId, secretKey));
-        }
-
-        final AmazonEC2Client client=new AmazonEC2Client(provider);
+        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getActiveInstance());
+        final AmazonEC2Client client =
+                credentials != null ?
+                        new AmazonEC2Client(credentials) :
+                        new AmazonEC2Client();
         if (region != null)
             client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
         return client;
@@ -338,20 +328,27 @@ public class EC2FleetCloud extends Cloud
             return "Amazon SpotFleet";
         }
 
-        public ListBoxModel doFillRegionItems(@QueryParameter final boolean useInstanceProfileForCredentials,
-                                              @QueryParameter final String accessId,
-                                              @QueryParameter final String secretKey,
+        public ListBoxModel doFillCredentialsIdItems() {
+            return new StandardListBoxModel()
+                    .withEmptySelection()
+                    .withMatching(
+                            CredentialsMatchers.always(),
+                            CredentialsProvider.lookupCredentials(AmazonWebServicesCredentials.class,
+                                    Jenkins.getInstance(),
+                                    ACL.SYSTEM,
+                                    Collections.EMPTY_LIST));
+        }
+
+        public ListBoxModel doFillRegionItems(@QueryParameter final String credentialsId,
                                               @QueryParameter final String region)
                 throws IOException, ServletException {
             final List<Region> regionList;
 
             try {
-                final AmazonEC2 client=connect(useInstanceProfileForCredentials,
-                        accessId, secretKey, null);
+                final AmazonEC2 client = connect(credentialsId, null);
                 final DescribeRegionsResult regions=client.describeRegions();
                 regionList=regions.getRegions();
-            } catch(final Exception ex)
-            {
+            } catch(final Exception ex) {
                 //Ignore bad exceptions
                 return new ListBoxModel();
             }
@@ -364,16 +361,13 @@ public class EC2FleetCloud extends Cloud
         }
 
         public ListBoxModel doFillFleetItems(@QueryParameter final String region,
-                                             @QueryParameter final boolean useInstanceProfileForCredentials,
-                                             @QueryParameter final String accessId,
-                                             @QueryParameter final String secretKey,
+                                             @QueryParameter final String credentialsId,
                                              @QueryParameter final String fleet)
                 throws IOException, ServletException {
 
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client=connect(useInstanceProfileForCredentials,
-                        accessId, secretKey, region);
+                final AmazonEC2 client=connect(credentialsId, region);
                 String token = null;
                 do {
                     final DescribeSpotFleetRequestsRequest req=new DescribeSpotFleetRequestsRequest();
@@ -389,8 +383,7 @@ public class EC2FleetCloud extends Cloud
                     token = result.getNextToken();
                 } while(token != null);
 
-            } catch(final Exception ex)
-            {
+            } catch(final Exception ex) {
                 //Ignore bad exceptions
                 return model;
             }
@@ -399,15 +392,12 @@ public class EC2FleetCloud extends Cloud
         }
 
         public FormValidation doTestConnection(
-                @QueryParameter final boolean useInstanceProfileForCredentials,
-                @QueryParameter final String accessId,
-                @QueryParameter final String secretKey,
+                @QueryParameter final String credentialsId,
                 @QueryParameter final String region,
                 @QueryParameter final String fleet)
         {
             try {
-                final AmazonEC2 client=connect(useInstanceProfileForCredentials,
-                        accessId, secretKey, region);
+                final AmazonEC2 client=connect(credentialsId, region);
                 client.describeSpotFleetInstances(
                         new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
             } catch(final Exception ex)
