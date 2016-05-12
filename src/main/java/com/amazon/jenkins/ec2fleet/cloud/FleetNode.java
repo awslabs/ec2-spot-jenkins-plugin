@@ -28,17 +28,9 @@ public class FleetNode extends Slave implements EphemeralNode
     private final String cloudName;
 
     public FleetNode(final String name, final String nodeDescription, final String remoteFS, final String numExecutors, final Mode mode, final String label,
-                     final List<? extends NodeProperty<?>> nodeProperties, final String address, final String cloudName) throws IOException, Descriptor.FormException {
+                     final List<? extends NodeProperty<?>> nodeProperties, final String cloudName, ComputerLauncher launcher) throws IOException, Descriptor.FormException {
         super(name, nodeDescription, remoteFS, numExecutors, mode, label,
-                new SimpleRemoteLauncher(address), RetentionStrategy.NOOP, nodeProperties);
-        this.cloudName = cloudName;
-    }
-
-    @DataBoundConstructor
-    public FleetNode(final String name, final String nodeDescription, final String remoteFS, final String numExecutors, final Mode mode, final String labelString,
-                     final ComputerLauncher launcher, final RetentionStrategy<?> retentionStrategy, final List<? extends NodeProperty<?>> nodeProperties,
-                     final String cloudName) throws Descriptor.FormException, IOException {
-        super(name, nodeDescription, remoteFS, Util.tryParseNumber(numExecutors, 1).intValue(), mode, labelString, launcher, retentionStrategy, nodeProperties);
+                launcher, RetentionStrategy.NOOP, nodeProperties);
         this.cloudName = cloudName;
     }
 
