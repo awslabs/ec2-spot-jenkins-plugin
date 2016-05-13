@@ -1,10 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.amazon.jenkins.ec2fleet.cloud.FleetNode;
-import com.amazonaws.auth.AWSCredentialsProvider;
-import com.amazonaws.auth.BasicAWSCredentials;
-import com.amazonaws.auth.InstanceProfileCredentialsProvider;
-import com.amazonaws.internal.StaticCredentialsProvider;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -31,6 +27,7 @@ import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.security.ACL;
 import hudson.slaves.Cloud;
+import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.FormValidation;
@@ -72,8 +69,7 @@ public class EC2FleetCloud extends Cloud
     private final String credentialsId;
     private final String region;
     private final String fleet;
-    private final String userName;
-    private final String privateKey;
+    private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
     private final Integer idleMinutes;
     private final Integer maxSize;
@@ -87,15 +83,14 @@ public class EC2FleetCloud extends Cloud
     @DataBoundConstructor
     public EC2FleetCloud(final String credentialsId,
                          final String region, final String fleet,
-                         final String userName, final String privateKey,
+                         final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
                          final Integer idleMinutes, final Integer maxSize) {
         super(FLEET_CLOUD_ID);
         this.credentialsId = credentialsId;
         this.region = region;
         this.fleet = fleet;
-        this.userName = userName;
-        this.privateKey = privateKey;
+        this.computerConnector = computerConnector;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
@@ -115,9 +110,9 @@ public class EC2FleetCloud extends Cloud
         return fleet;
     }
 
-    public String getUserName() { return userName; }
-
-    public String getPrivateKey() { return privateKey; }
+    public ComputerConnector getComputerConnector() {
+        return computerConnector;
+    }
 
     public boolean isPrivateIpUsed() {
         return privateIpUsed;
@@ -239,7 +234,7 @@ public class EC2FleetCloud extends Cloud
 
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
                 fsRoot, "1", Node.Mode.NORMAL, "ec2-fleet", new ArrayList<NodeProperty<?>>(),
-                address, FLEET_CLOUD_ID);
+                FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
         if (getIdleMinutes() != null)
@@ -326,6 +321,10 @@ public class EC2FleetCloud extends Cloud
         @Override
         public String getDisplayName() {
             return "Amazon SpotFleet";
+        }
+
+        public List getComputerConnectorDescriptors() {
+            return Jenkins.getActiveInstance().getDescriptorList(ComputerConnector.class);
         }
 
         public ListBoxModel doFillCredentialsIdItems() {

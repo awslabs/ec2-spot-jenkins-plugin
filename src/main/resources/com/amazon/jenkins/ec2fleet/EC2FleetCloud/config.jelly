@@ -19,15 +19,8 @@
     <f:entry title="${%Spot Fleet}" field="fleet">
       <f:select/>
     </f:entry>
-    <f:description>The user name to login into the fleet's hosts
-    </f:description>
-    <f:entry title="${%User Name}" field="userName">
-      <f:textbox />
-    </f:entry>
-    <f:description>The private key for the fleet's hosts
-    </f:description>
-    <f:entry title="${%Private Key}" field="privateKey">
-      <f:textarea />
+    <f:entry title="${%Launcher}" field="laucnher">
+      <f:dropdownDescriptorSelector field="computerConnector" descriptors="${descriptor.getComputerConnectorDescriptors()}"/>
     </f:entry>
     <f:description>Connect using private IP
     </f:description>
