@@ -328,14 +328,7 @@ public class EC2FleetCloud extends Cloud
         }
 
         public ListBoxModel doFillCredentialsIdItems() {
-            return new StandardListBoxModel()
-                    .withEmptySelection()
-                    .withMatching(
-                            CredentialsMatchers.always(),
-                            CredentialsProvider.lookupCredentials(AmazonWebServicesCredentials.class,
-                                    Jenkins.getInstance(),
-                                    ACL.SYSTEM,
-                                    Collections.EMPTY_LIST));
+            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getActiveInstance());
         }
 
         public ListBoxModel doFillRegionItems(@QueryParameter final String credentialsId,
