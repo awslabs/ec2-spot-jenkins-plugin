@@ -33,6 +33,12 @@
     </developer>
   </developers>
 
+  <scm>
+    <connection>scm:git:ssh://github.com/jenkinsci/ec2-fleet-plugin.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/jenkinsci/ec2-fleet-plugin.git</developerConnection>
+    <url>https://github.com/jenkinsci/ec2-fleet-plugin</url>
+  </scm>
+
   <repositories>
     <repository>
       <id>repo.jenkins-ci.org</id>
