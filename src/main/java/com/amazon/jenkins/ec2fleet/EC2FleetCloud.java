@@ -244,7 +244,7 @@ public class EC2FleetCloud extends Cloud
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (jenkins) {
             // Try to avoid duplicate nodes
-            final Node n = jenkins.getNode(name);
+            final Node n = jenkins.getNode(instanceId);
             if (n != null)
                 jenkins.removeNode(n);
             jenkins.addNode(slave);
@@ -262,8 +262,26 @@ public class EC2FleetCloud extends Cloud
     }
 
     public synchronized void terminateInstance(final String instanceId) {
-        if (!instancesSeen.contains(instanceId) || instancesDying.contains(instanceId))
+        if (!instancesSeen.contains(instanceId) && !instancesDying.contains(instanceId))
             throw new IllegalStateException("Unknown instance terminated: " + instanceId);
+
+        if (instancesDying.contains(instanceId)) {
+            final Jenkins jenkins=Jenkins.getActiveInstance();
+
+            //noinspection SynchronizationOnLocalVariableOrMethodParameter
+            synchronized (jenkins) {
+                // If this node has been dying for long enough, get rid of it
+                final Node n = jenkins.getNode(instanceId);
+                if (n != null) {
+                    try {
+                        jenkins.removeNode(n);
+                    } catch(final Exception ex) {
+                        throw new IllegalStateException(ex);
+                    }
+                }
+            }
+            return;
+        }
 
         final FleetStateStats stats=updateStatus();
         //We can't remove the last instance
