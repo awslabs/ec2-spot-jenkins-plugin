@@ -160,16 +160,23 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
+        int targetCapacity = stats.getNumDesired() + excessWorkload;
+
+        if (targetCapacity > maxAllowed)
+            targetCapacity = maxAllowed;
+
+        int toProvision = targetCapacity - stats.getNumDesired();
+
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
-        request.setTargetCapacity(stats.getNumDesired() + excessWorkload);
+        request.setTargetCapacity(targetCapacity);
 
         final AmazonEC2 ec2=connect(credentialsId, region);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList =
                 new ArrayList<NodeProvisioner.PlannedNode>();
-        for(int f=0;f<excessWorkload; ++f)
+        for(int f=0;f<toProvision; ++f)
         {
             final SettableFuture<Node> futureNode=SettableFuture.create();
             final NodeProvisioner.PlannedNode plannedNode=
