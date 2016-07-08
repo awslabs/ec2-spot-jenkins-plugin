@@ -202,14 +202,21 @@ public class EC2FleetCloud extends Cloud
         newInstances.removeAll(instancesSeen);
         newInstances.removeAll(instancesDying);
 
+        final Set<String> instancesToRemove = new HashSet<String>();
+
         // Instance unknown to Jenkins but known to Fleet. Terminate it.
         for(final String instId : instancesSeen) {
             if (!instancesDying.contains(instId) &&
                     !jenkinsInstances.contains(instId)) {
                 // Use a nuclear option to terminate an unknown instance
-                ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
+                try {
+                    ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
+                } catch (final Exception ex) {
+                    instancesToRemove.add(instId);
+                }
             }
         }
+        instancesSeen.removeAll(instancesToRemove);
 
         // If we have new instances - create nodes for them!
         for(final String instanceId : newInstances) {
