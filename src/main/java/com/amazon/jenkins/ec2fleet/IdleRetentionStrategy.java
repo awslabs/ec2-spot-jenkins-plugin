@@ -36,21 +36,10 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         if (isIdleForTooLong(c)){
             // Split labels and find instance ID
             Node compNode = c.getNode();
-            if (compNode.equals(null)){
+            if (compNode == null)
                 return 0;
-            }
             
-            String nodeId = null;
-            for(String str: c.getNode().getLabelString().split(" ")){
-                if(str.startsWith("i-")){
-                    nodeId = str;
-                }
-            }
-             
-            if (nodeId.equals(null)){
-                LOGGER.log(Level.INFO, "Node " + c.getName(), " does not have proper labels");
-                return 0;
-            }
+            final String nodeId = compNode.getNodeName();
             LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
             parent.terminateInstance(nodeId);
         } else {

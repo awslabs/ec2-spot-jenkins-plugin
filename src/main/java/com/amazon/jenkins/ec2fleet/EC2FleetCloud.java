@@ -332,7 +332,7 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: " + this.label + " wanting:" + label.getName());
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.label + "\" wanting: \"" + label.getName() + "\"");
         return fleet != null && this.label.equals(label.getName());
     }
 
