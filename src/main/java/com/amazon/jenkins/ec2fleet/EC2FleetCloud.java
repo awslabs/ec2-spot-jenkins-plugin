@@ -71,6 +71,7 @@ public class EC2FleetCloud extends Cloud
     private final String fleet;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
+    private final String label;
     private final Integer idleMinutes;
     private final Integer maxSize;
     private @Nonnull FleetStateStats status;
@@ -80,17 +81,23 @@ public class EC2FleetCloud extends Cloud
     private final Set<String> instancesSeen = new HashSet<String>();
     private final Set<String> instancesDying = new HashSet<String>();
 
+    private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
+
     @DataBoundConstructor
     public EC2FleetCloud(final String credentialsId,
-                         final String region, final String fleet,
+                         final String region,
+                         final String fleet,
+                         final String label,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
-                         final Integer idleMinutes, final Integer maxSize) {
+                         final Integer idleMinutes,
+                         final Integer maxSize) {
         super(FLEET_CLOUD_ID);
         this.credentialsId = credentialsId;
         this.region = region;
         this.fleet = fleet;
         this.computerConnector = computerConnector;
+        this.label = label;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
@@ -116,6 +123,10 @@ public class EC2FleetCloud extends Cloud
 
     public boolean isPrivateIpUsed() {
         return privateIpUsed;
+    }
+
+    public String getLabel(){
+        return label;
     }
 
     public Integer getIdleMinutes() {
@@ -191,6 +202,8 @@ public class EC2FleetCloud extends Cloud
         final AmazonEC2 ec2=connect(credentialsId, region);
         final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
         status = curStatus;
+        LOGGER.log(Level.FINE, "Fleet Update Status called");
+        LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
 
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
@@ -247,7 +260,7 @@ public class EC2FleetCloud extends Cloud
             return; // Wait some more...
 
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
-                fsRoot, "1", Node.Mode.NORMAL, "ec2-fleet", new ArrayList<NodeProperty<?>>(),
+                fsRoot, "1", Node.Mode.NORMAL, this.label, new ArrayList<NodeProperty<?>>(),
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
@@ -276,6 +289,7 @@ public class EC2FleetCloud extends Cloud
     }
 
     public synchronized void terminateInstance(final String instanceId) {
+        LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
         if (!instancesSeen.contains(instanceId) && !instancesDying.contains(instanceId))
             throw new IllegalStateException("Unknown instance terminated: " + instanceId);
 
@@ -318,7 +332,8 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        return fleet != null;
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: " + this.label + " wanting:" + label.getName());
+        return fleet != null && this.label.equals(label.getName());
     }
 
     private static AmazonEC2 connect(final String credentialsId, final String region) {
@@ -332,6 +347,7 @@ public class EC2FleetCloud extends Cloud
             client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
         return client;
     }
+
 
     @Extension
     @SuppressWarnings("unused")
