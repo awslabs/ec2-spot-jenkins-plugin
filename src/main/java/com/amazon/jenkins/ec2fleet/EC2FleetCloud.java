@@ -102,7 +102,7 @@ public class EC2FleetCloud extends Cloud
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
 
-        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet());
+        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), label);
     }
 
     public String getCredentialsId() {
@@ -200,7 +200,7 @@ public class EC2FleetCloud extends Cloud
 
     public synchronized FleetStateStats updateStatus() {
         final AmazonEC2 ec2=connect(credentialsId, region);
-        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
+        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.label);
         status = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
         LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());

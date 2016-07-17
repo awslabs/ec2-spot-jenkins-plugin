@@ -5,7 +5,7 @@
                 <j:forEach var = "fleet" items = "${it.statusList}">
                     <li style="font-weight: bold;">${fleet.fleetId}</li>
                     <div>State: ${fleet.state},
-                        nodes: ${fleet.numActive}, target: ${fleet.numDesired}
+                        label: ${fleet.label}, nodes: ${fleet.numActive}, target: ${fleet.numDesired}
                     </div>
                     <br/>
                 </j:forEach>
