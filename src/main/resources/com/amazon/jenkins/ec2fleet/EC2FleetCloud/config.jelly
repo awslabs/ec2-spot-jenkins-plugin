@@ -27,6 +27,11 @@
     <f:entry title="${%Connect Private}" field="privateIpUsed">
       <f:checkbox />
     </f:entry>
+    <f:description>Labels to add to instances in this fleet
+    </f:description>
+    <f:entry title="${%Label}" field="label">
+      <f:textbox />
+    </f:entry>
     <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
       <f:number clazz="positive-number"/>
     </f:entry>

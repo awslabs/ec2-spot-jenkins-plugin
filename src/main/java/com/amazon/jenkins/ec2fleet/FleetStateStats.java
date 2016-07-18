@@ -29,15 +29,18 @@ public final class FleetStateStats
     private @Nonnegative final int numDesired;
     private @Nonnull final String state;
     private @Nonnull final Set<String> instances;
+    private @Nonnull final String label;
 
     public FleetStateStats(final @Nonnull String fleetId,
                            final int numDesired, final @Nonnull String state,
-                           final @Nonnull Set<String> instances) {
+                           final @Nonnull Set<String> instances,
+                           final @Nonnull String label) {
         this.fleetId=fleetId;
         this.numActive=instances.size();
         this.numDesired=numDesired;
         this.state=state;
         this.instances=instances;
+        this.label=label;
     }
 
     @Nonnull public String getFleetId() {
@@ -60,7 +63,11 @@ public final class FleetStateStats
         return instances;
     }
 
-    public static FleetStateStats readClusterState(final AmazonEC2 ec2, final String fleetId)
+    @Nonnull public String getLabel() {
+        return label;
+    }
+
+    public static FleetStateStats readClusterState(final AmazonEC2 ec2, final String fleetId, final String label)
     {
         String token = null;
         final Set<String> instances = new HashSet<String>();
@@ -86,6 +93,7 @@ public final class FleetStateStats
 
         return new FleetStateStats(fleetId,
                 fleetConfig.getSpotFleetRequestConfig().getTargetCapacity(),
-                fleetConfig.getSpotFleetRequestState(), instances);
+                fleetConfig.getSpotFleetRequestState(), instances,
+                label);
     }
 }
