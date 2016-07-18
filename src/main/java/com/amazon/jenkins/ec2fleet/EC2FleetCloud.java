@@ -208,24 +208,39 @@ public class EC2FleetCloud extends Cloud
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
         final Set<String> jenkinsInstances = new HashSet<String>();
-        for(final Node node : Jenkins.getActiveInstance().getNodes()) {
-            newInstances.remove(node.getDisplayName());
-            jenkinsInstances.add(node.getDisplayName());
+        for(final Node node : Jenkins.getInstance().getNodes()) {
+            if (newInstances.contains(node.getNodeName())) {
+                newInstances.remove(node.getNodeName());
+                instancesSeen.add(node.getNodeName());
+            }
+            jenkinsInstances.add(node.getNodeName());
         }
         newInstances.removeAll(instancesSeen);
         newInstances.removeAll(instancesDying);
 
         final Set<String> instancesToRemove = new HashSet<String>();
 
-        // Instance unknown to Jenkins but known to Fleet. Terminate it.
         for(final String instId : instancesSeen) {
             if (!instancesDying.contains(instId) &&
                     !jenkinsInstances.contains(instId)) {
+                // Instance unknown to Jenkins but known to Fleet. Terminate it.
                 // Use a nuclear option to terminate an unknown instance
                 try {
                     ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
                 } catch (final Exception ex) {
                     instancesToRemove.add(instId);
+                    continue;
+                }
+            }
+            if (jenkinsInstances.contains(instId)) {
+                Node node = Jenkins.getInstance().getNode(instId);
+                if (!this.label.equals(node.getLabelString())) {
+                    try {
+                        LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.label + "\".");
+                        node.setLabelString(this.label);
+                    } catch (final Exception ex) {
+                        LOGGER.log(Level.WARNING, "Unable to set label on node " + instId);
+                    }
                 }
             }
         }
@@ -267,7 +282,7 @@ public class EC2FleetCloud extends Cloud
         if (getIdleMinutes() != null)
             slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
 
-        final Jenkins jenkins=Jenkins.getActiveInstance();
+        final Jenkins jenkins=Jenkins.getInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (jenkins) {
             // Try to avoid duplicate nodes
@@ -294,7 +309,7 @@ public class EC2FleetCloud extends Cloud
             throw new IllegalStateException("Unknown instance terminated: " + instanceId);
 
         if (instancesDying.contains(instanceId)) {
-            final Jenkins jenkins=Jenkins.getActiveInstance();
+            final Jenkins jenkins=Jenkins.getInstance();
 
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (jenkins) {
@@ -338,7 +353,7 @@ public class EC2FleetCloud extends Cloud
 
     private static AmazonEC2 connect(final String credentialsId, final String region) {
 
-        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getActiveInstance());
+        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getInstance());
         final AmazonEC2Client client =
                 credentials != null ?
                         new AmazonEC2Client(credentials) :
@@ -372,11 +387,11 @@ public class EC2FleetCloud extends Cloud
         }
 
         public List getComputerConnectorDescriptors() {
-            return Jenkins.getActiveInstance().getDescriptorList(ComputerConnector.class);
+            return Jenkins.getInstance().getDescriptorList(ComputerConnector.class);
         }
 
         public ListBoxModel doFillCredentialsIdItems() {
-            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getActiveInstance());
+            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getInstance());
         }
 
         public ListBoxModel doFillRegionItems(@QueryParameter final String credentialsId,
