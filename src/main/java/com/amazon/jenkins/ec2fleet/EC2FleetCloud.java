@@ -220,20 +220,14 @@ public class EC2FleetCloud extends Cloud
         newInstances.removeAll(instancesSeen);
         newInstances.removeAll(instancesDying);
 
-        final Set<String> instancesToRemove = new HashSet<String>();
+        final List<String> instancesToRemove = new ArrayList<String>(instancesSeen.size());
 
         for(final String instId : instancesSeen) {
             if (instancesDying.contains(instId))
                 continue;
 
             if (!jenkinsInstances.contains(instId)) {
-                // Instance unknown to Jenkins but known to Fleet. Terminate it.
-                // Use a nuclear option to terminate an unknown instance
-                try {
-                    ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
-                } catch (final Exception ex) {
-                    instancesToRemove.add(instId);
-                }
+                instancesToRemove.add(instId);
                 continue;
             }
 
@@ -250,15 +244,24 @@ public class EC2FleetCloud extends Cloud
                 }
             }
         }
-        instancesSeen.removeAll(instancesToRemove);
+
+        if (instancesToRemove.size() > 0) {
+            instancesSeen.removeAll(instancesToRemove);
+            try {
+                // Instances unknown to Jenkins but known to Fleet. Terminate them.
+                ec2.terminateInstances(new TerminateInstancesRequest(instancesToRemove));
+            } catch (final Exception ex) {
+                LOGGER.log(Level.WARNING, "Unable to remove some instances. Exception: " + ex.toString());
+            }
+        }
 
         // If we have new instances - create nodes for them!
-        for(final String instanceId : newInstances) {
-            try {
+        try {
+            for(final String instanceId : newInstances) {
                 addNewSlave(ec2, instanceId);
-            } catch(final Exception ex) {
-                throw new IllegalStateException(ex);
             }
+        } catch(final Exception ex) {
+            LOGGER.log(Level.WARNING, "Unable to add a new instance. Exception: " + ex.toString());
         }
 
         return curStatus;
@@ -353,8 +356,9 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + label.getName() + "\"");
-        return fleet != null && this.label.matches(label.listAtoms());
+        boolean result = fleet != null && this.label.listAtoms().containsAll(label.listAtoms());
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.label.getName() + "\" wanting: \"" + label.getName() + "\". Returning " + Boolean.toString(result) + ".");
+        return result;
     }
 
     private static AmazonEC2 connect(final String credentialsId, final String region) {
