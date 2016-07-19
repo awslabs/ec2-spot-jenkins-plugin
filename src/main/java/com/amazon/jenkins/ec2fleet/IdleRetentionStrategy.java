@@ -34,7 +34,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
 
     @Override public long check(final SlaveComputer c) {
         if (isIdleForTooLong(c)){
-            // Split labels and find instance ID
+            // Find instance ID
             Node compNode = c.getNode();
             if (compNode == null)
                 return 0;

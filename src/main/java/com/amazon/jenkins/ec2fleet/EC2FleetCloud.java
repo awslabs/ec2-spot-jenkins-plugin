@@ -88,7 +88,7 @@ public class EC2FleetCloud extends Cloud
     public EC2FleetCloud(final String credentialsId,
                          final String region,
                          final String fleet,
-                         final String label,
+                         final String labelString,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
                          final Integer idleMinutes,
@@ -98,13 +98,13 @@ public class EC2FleetCloud extends Cloud
         this.region = region;
         this.fleet = fleet;
         this.computerConnector = computerConnector;
-        this.labelString = label;
-        this.label = Jenkins.getInstance().getLabel(label);
+        this.labelString = labelString;
+        this.label = Jenkins.getInstance().getLabel(labelString);
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
 
-        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), label);
+        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), labelString);
     }
 
     public String getCredentialsId() {
@@ -127,7 +127,7 @@ public class EC2FleetCloud extends Cloud
         return privateIpUsed;
     }
 
-    public String getLabel(){
+    public String getLabelString(){
         return this.labelString;
     }
 
@@ -223,26 +223,30 @@ public class EC2FleetCloud extends Cloud
         final Set<String> instancesToRemove = new HashSet<String>();
 
         for(final String instId : instancesSeen) {
-            if (!instancesDying.contains(instId) &&
-                    !jenkinsInstances.contains(instId)) {
+            if (instancesDying.contains(instId))
+                continue;
+
+            if (!jenkinsInstances.contains(instId)) {
                 // Instance unknown to Jenkins but known to Fleet. Terminate it.
                 // Use a nuclear option to terminate an unknown instance
                 try {
                     ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
                 } catch (final Exception ex) {
                     instancesToRemove.add(instId);
-                    continue;
                 }
+                continue;
             }
-            if (jenkinsInstances.contains(instId)) {
-                Node node = Jenkins.getInstance().getNode(instId);
-                if (!this.labelString.equals(node.getLabelString())) {
-                    try {
-                        LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.labelString + "\".");
-                        node.setLabelString(this.labelString);
-                    } catch (final Exception ex) {
-                        LOGGER.log(Level.WARNING, "Unable to set label on node " + instId);
-                    }
+
+            Node node = Jenkins.getInstance().getNode(instId);
+            if (node == null)
+                continue;
+
+            if (!this.labelString.equals(node.getLabelString())) {
+                try {
+                    LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.labelString + "\".");
+                    node.setLabelString(this.labelString);
+                } catch (final Exception ex) {
+                    LOGGER.log(Level.WARNING, "Unable to set label on node " + instId);
                 }
             }
         }
