@@ -71,7 +71,8 @@ public class EC2FleetCloud extends Cloud
     private final String fleet;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
-    private final String label;
+    private final String labelString;
+    private final Label label;
     private final Integer idleMinutes;
     private final Integer maxSize;
     private @Nonnull FleetStateStats status;
@@ -97,7 +98,8 @@ public class EC2FleetCloud extends Cloud
         this.region = region;
         this.fleet = fleet;
         this.computerConnector = computerConnector;
-        this.label = label;
+        this.labelString = label;
+        this.label = Jenkins.getInstance().getLabel(label);
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
@@ -126,7 +128,7 @@ public class EC2FleetCloud extends Cloud
     }
 
     public String getLabel(){
-        return label;
+        return this.labelString;
     }
 
     public Integer getIdleMinutes() {
@@ -200,7 +202,7 @@ public class EC2FleetCloud extends Cloud
 
     public synchronized FleetStateStats updateStatus() {
         final AmazonEC2 ec2=connect(credentialsId, region);
-        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.label);
+        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
         status = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
         LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
@@ -234,10 +236,10 @@ public class EC2FleetCloud extends Cloud
             }
             if (jenkinsInstances.contains(instId)) {
                 Node node = Jenkins.getInstance().getNode(instId);
-                if (!this.label.equals(node.getLabelString())) {
+                if (!this.labelString.equals(node.getLabelString())) {
                     try {
-                        LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.label + "\".");
-                        node.setLabelString(this.label);
+                        LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.labelString + "\".");
+                        node.setLabelString(this.labelString);
                     } catch (final Exception ex) {
                         LOGGER.log(Level.WARNING, "Unable to set label on node " + instId);
                     }
@@ -275,7 +277,7 @@ public class EC2FleetCloud extends Cloud
             return; // Wait some more...
 
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
-                fsRoot, "1", Node.Mode.NORMAL, this.label, new ArrayList<NodeProperty<?>>(),
+                fsRoot, "1", Node.Mode.NORMAL, this.labelString, new ArrayList<NodeProperty<?>>(),
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
@@ -347,8 +349,8 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.label + "\" wanting: \"" + label.getName() + "\"");
-        return fleet != null && this.label.equals(label.getName());
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + label.getName() + "\"");
+        return fleet != null && this.label.matches(label.listAtoms());
     }
 
     private static AmazonEC2 connect(final String credentialsId, final String region) {
