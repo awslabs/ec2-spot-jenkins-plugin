@@ -72,7 +72,6 @@ public class EC2FleetCloud extends Cloud
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
     private final String labelString;
-    private final Label label;
     private final Integer idleMinutes;
     private final Integer maxSize;
     private @Nonnull FleetStateStats status;
@@ -99,7 +98,6 @@ public class EC2FleetCloud extends Cloud
         this.fleet = fleet;
         this.computerConnector = computerConnector;
         this.labelString = labelString;
-        this.label = Jenkins.getInstance().getLabel(labelString);
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
         this.maxSize = maxSize;
@@ -167,6 +165,7 @@ public class EC2FleetCloud extends Cloud
     @Override public synchronized Collection<NodeProvisioner.PlannedNode> provision(
             final Label label, final int excessWorkload) {
 
+
         final FleetStateStats stats=updateStatus();
         final int maxAllowed = this.getMaxSize();
 
@@ -179,6 +178,8 @@ public class EC2FleetCloud extends Cloud
             targetCapacity = maxAllowed;
 
         int toProvision = targetCapacity - stats.getNumDesired();
+
+        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(excessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
 
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
@@ -356,8 +357,8 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        boolean result = fleet != null && this.label.listAtoms().containsAll(label.listAtoms());
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.label.getName() + "\" wanting: \"" + label.getName() + "\". Returning " + Boolean.toString(result) + ".");
+        boolean result = fleet != null && Label.parse(this.labelString).containsAll(label.listAtoms());
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + label.getName() + "\". Returning " + Boolean.toString(result) + ".");
         return result;
     }
 
