@@ -32,6 +32,11 @@
     <f:entry title="${%Label}" field="labelString">
       <f:textbox clazz="required" />
     </f:entry>
+    <f:description>Number of executors per instance
+    </f:description>
+    <f:entry title="${%Number of Executors}" field="numExecutors">
+      <f:textbox clazz="required positive-number" />
+    </f:entry>
     <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
       <f:number clazz="positive-number"/>
     </f:entry>
