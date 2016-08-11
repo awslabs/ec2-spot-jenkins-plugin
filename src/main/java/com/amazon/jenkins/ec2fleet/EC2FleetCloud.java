@@ -73,6 +73,7 @@ public class EC2FleetCloud extends Cloud
     private final boolean privateIpUsed;
     private final String labelString;
     private final Integer idleMinutes;
+    private final Integer minSize;
     private final Integer maxSize;
     private final Integer numExecutors;
     private @Nonnull FleetStateStats status;
@@ -92,6 +93,7 @@ public class EC2FleetCloud extends Cloud
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
                          final Integer idleMinutes,
+                         final Integer minSize,
                          final Integer maxSize,
                          final Integer numExecutors) {
         super(FLEET_CLOUD_ID);
@@ -102,6 +104,7 @@ public class EC2FleetCloud extends Cloud
         this.labelString = labelString;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
+        this.minSize = minSize;
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
 
@@ -138,6 +141,10 @@ public class EC2FleetCloud extends Cloud
 
     public Integer getMaxSize() {
         return maxSize;
+    }
+
+    public Integer getMinSize() {
+        return minSize;
     }
 
     public Integer getNumExecutors() {
@@ -345,7 +352,7 @@ public class EC2FleetCloud extends Cloud
 
         final FleetStateStats stats=updateStatus();
         //We can't remove the last instance
-        if (stats.getNumDesired() == 1 || !"active".equals(stats.getState()))
+        if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState()))
             return;
 
         final AmazonEC2 ec2 = connect(credentialsId, region);
