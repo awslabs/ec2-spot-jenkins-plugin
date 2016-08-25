@@ -159,6 +159,10 @@ public class EC2FleetCloud extends Cloud
         return status;
     }
 
+    public synchronized boolean isInstanceDying(final String instanceId) {
+        return instancesDying.contains(instanceId);
+    }
+
     public static void log(final Logger logger, final Level level,
                            final TaskListener listener, final String message) {
         log(logger, level, listener, message, null);
@@ -329,6 +333,7 @@ public class EC2FleetCloud extends Cloud
 
     public synchronized void terminateInstance(final String instanceId) {
         LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
+
         if (!instancesSeen.contains(instanceId) && !instancesDying.contains(instanceId))
             throw new IllegalStateException("Unknown instance terminated: " + instanceId);
 

@@ -33,18 +33,22 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
     }
 
     @Override public long check(final SlaveComputer c) {
-        if (isIdleForTooLong(c)){
-            // Find instance ID
-            Node compNode = c.getNode();
-            if (compNode == null)
-                return 0;
-            
-            final String nodeId = compNode.getNodeName();
-            LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
-            parent.terminateInstance(nodeId);
-        } else {
-            if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
-                c.tryReconnect();
+        // Ensure that nothing can be provisioned on this node while we're
+        // doing this check
+        synchronized(parent) {
+            if (isIdleForTooLong(c)){
+                // Find instance ID
+                Node compNode = c.getNode();
+                if (compNode == null)
+                    return 0;
+
+                final String nodeId = compNode.getNodeName();
+                LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
+                parent.terminateInstance(nodeId);
+            } else {
+                if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
+                    c.tryReconnect();
+            }
         }
 
         return 1;
