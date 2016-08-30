@@ -270,7 +270,7 @@ public class EC2FleetCloud extends Cloud
                 // Instances unknown to Jenkins but known to Fleet. Terminate them.
                 ec2.terminateInstances(new TerminateInstancesRequest(instancesToRemove));
             } catch (final Exception ex) {
-                LOGGER.log(Level.WARNING, "Unable to remove some instances. Exception: " + ex.toString());
+                LOGGER.log(Level.WARNING, "Unable to remove some instances. Instances removed: [" + String.join(", ", instancesToRemove) + "], Exception: " + ex.toString());
             }
         }
 
