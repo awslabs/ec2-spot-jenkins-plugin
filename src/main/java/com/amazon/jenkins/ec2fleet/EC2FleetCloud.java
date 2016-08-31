@@ -21,6 +21,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -276,6 +277,9 @@ public class EC2FleetCloud extends Cloud
 
         // If we have new instances - create nodes for them!
         try {
+            if (newInstances.size() > 0) {
+                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" + String.join(", ", newInstances) + "]");
+            }
             for(final String instanceId : newInstances) {
                 addNewSlave(ec2, instanceId);
             }
@@ -342,13 +346,18 @@ public class EC2FleetCloud extends Cloud
 
             //noinspection SynchronizationOnLocalVariableOrMethodParameter
             synchronized (jenkins) {
-                // If this node has been dying for long enough, get rid of it
+                // If this node is dying, and its Computer is offline,
+                // remove it from Jenkins
                 final Node n = jenkins.getNode(instanceId);
                 if (n != null) {
-                    try {
-                        jenkins.removeNode(n);
-                    } catch(final Exception ex) {
-                        throw new IllegalStateException(ex);
+                    final Computer c = n.toComputer();
+                    if (c == null || c.isOffline()) {
+                        try {
+                            LOGGER.log(Level.INFO, "Node " + instanceId + " has gone offline after being terminated. Removing it from Jenkins.");
+                            jenkins.removeNode(n);
+                        } catch(final Exception ex) {
+                            throw new IllegalStateException(ex);
+                        }
                     }
                 }
             }
@@ -356,7 +365,7 @@ public class EC2FleetCloud extends Cloud
         }
 
         final FleetStateStats stats=updateStatus();
-        //We can't remove the last instance
+        // We can't remove instances beyond minSize
         if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState()))
             return;
 
