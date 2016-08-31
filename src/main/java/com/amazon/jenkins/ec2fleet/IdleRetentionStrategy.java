@@ -33,21 +33,33 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
     }
 
     @Override public long check(final SlaveComputer c) {
-        // Ensure that nothing can be provisioned on this node while we're
-        // doing this check
+        // Ensure that the EC2FleetCloud cannot be mutated from under us while
+        // we're doing this check
         synchronized(parent) {
-            if (isIdleForTooLong(c)){
-                // Find instance ID
-                Node compNode = c.getNode();
-                if (compNode == null)
-                    return 0;
+            // Ensure nobody provisions onto this node until we've done
+            // checking
+            boolean shouldAcceptTasks = c.isAcceptingTasks();
+            c.setAcceptingTasks(false);
+            try {
+                if (isIdleForTooLong(c)) {
+                    // Find instance ID
+                    Node compNode = c.getNode();
+                    if (compNode == null) {
+                        return 0;
+                    }
 
-                final String nodeId = compNode.getNodeName();
-                LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
-                parent.terminateInstance(nodeId);
-            } else {
-                if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
-                    c.tryReconnect();
+                    final String nodeId = compNode.getNodeName();
+                    LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
+                    if (parent.terminateInstance(nodeId)) {
+                        // Instance successfully terminated, so no longer accept tasks
+                        shouldAcceptTasks = false;
+                    }
+                } else {
+                    if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
+                        c.tryReconnect();
+                }
+            } finally {
+                c.setAcceptingTasks(shouldAcceptTasks);
             }
         }
 

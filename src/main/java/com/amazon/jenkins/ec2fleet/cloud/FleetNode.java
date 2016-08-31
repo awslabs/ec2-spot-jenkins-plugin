@@ -42,15 +42,6 @@ public class FleetNode extends Slave implements EphemeralNode
         return new FleetNodeComputer(this);
     }
 
-    @Override public boolean isAcceptingTasks() {
-        EC2FleetCloud cloud = getCloud();
-        if (cloud.isInstanceDying(getNodeName())) {
-            return false;
-        }
-
-        return super.isAcceptingTasks();
-    }
-
     public long getLaunchTimeoutInMillis() {
         return LAUNCH_TIMEOUT_MS;
     }

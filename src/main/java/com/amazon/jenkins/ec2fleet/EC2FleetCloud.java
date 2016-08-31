@@ -160,10 +160,6 @@ public class EC2FleetCloud extends Cloud
         return status;
     }
 
-    public synchronized boolean isInstanceDying(final String instanceId) {
-        return instancesDying.contains(instanceId);
-    }
-
     public static void log(final Logger logger, final Level level,
                            final TaskListener listener, final String message) {
         log(logger, level, listener, message, null);
@@ -268,10 +264,10 @@ public class EC2FleetCloud extends Cloud
         if (instancesToRemove.size() > 0) {
             instancesSeen.removeAll(instancesToRemove);
             try {
-                // Instances unknown to Jenkins but known to Fleet. Terminate them.
+                LOGGER.log(Level.INFO, "Instances unknown to Jenkins but appear in fleet: [" + String.join(", ", instancesToRemove) + "]");
                 ec2.terminateInstances(new TerminateInstancesRequest(instancesToRemove));
             } catch (final Exception ex) {
-                LOGGER.log(Level.WARNING, "Unable to remove some instances. Instances removed: [" + String.join(", ", instancesToRemove) + "], Exception: " + ex.toString());
+                LOGGER.log(Level.WARNING, "Unable to remove some instances. Exception: " + ex.toString());
             }
         }
 
@@ -335,7 +331,7 @@ public class EC2FleetCloud extends Cloud
         }
     }
 
-    public synchronized void terminateInstance(final String instanceId) {
+    public synchronized boolean terminateInstance(final String instanceId) {
         LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
 
         if (!instancesSeen.contains(instanceId) && !instancesDying.contains(instanceId))
@@ -361,13 +357,13 @@ public class EC2FleetCloud extends Cloud
                     }
                 }
             }
-            return;
+            return false;
         }
 
         final FleetStateStats stats=updateStatus();
         // We can't remove instances beyond minSize
         if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState()))
-            return;
+            return false;
 
         final AmazonEC2 ec2 = connect(credentialsId, region);
 
@@ -382,6 +378,8 @@ public class EC2FleetCloud extends Cloud
         //And remove the instance
         instancesSeen.remove(instanceId);
         instancesDying.add(instanceId);
+
+        return true;
     }
 
     @Override public boolean canProvision(final Label label) {
