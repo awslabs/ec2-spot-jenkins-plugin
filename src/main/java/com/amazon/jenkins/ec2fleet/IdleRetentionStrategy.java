@@ -49,7 +49,6 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
                     }
 
                     final String nodeId = compNode.getNodeName();
-                    LOGGER.log(Level.INFO, "Terminating Fleet instance: " + nodeId);
                     if (parent.terminateInstance(nodeId)) {
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;

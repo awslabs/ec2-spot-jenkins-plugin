@@ -14,6 +14,7 @@ import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -81,10 +82,24 @@ public class EC2FleetCloud extends Cloud
 
     private final Set<NodeProvisioner.PlannedNode> plannedNodes =
             new HashSet<NodeProvisioner.PlannedNode>();
+    // instancesSeen are all nodes known to both Jenkins and the fleet
     private final Set<String> instancesSeen = new HashSet<String>();
+    // instancesDying are terminated nodes known to both Jenkins and the fleet,
+    // that are waiting for termination
     private final Set<String> instancesDying = new HashSet<String>();
 
     private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
+
+    public static String join(final String separator, final Iterable<String> elements) {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (String i: elements) {
+            if (!isFirst) sb.append(separator);
+            else isFirst = false;
+            sb.append(i);
+        }
+        return sb.toString();
+    }
 
     @DataBoundConstructor
     public EC2FleetCloud(final String credentialsId,
@@ -216,6 +231,23 @@ public class EC2FleetCloud extends Cloud
         return resultList;
     }
 
+    private synchronized void removeNode(String instanceId) {
+        final Jenkins jenkins=Jenkins.getInstance();
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (jenkins) {
+            // If this node is dying, remove it from Jenkins
+            final Node n = jenkins.getNode(instanceId);
+            if (n != null) {
+                try {
+                    jenkins.removeNode(n);
+                } catch(final Exception ex) {
+                    LOGGER.log(Level.WARNING, "Error removing node " + instanceId);
+                    throw new IllegalStateException(ex);
+                }
+            }
+        }
+    }
+
     public synchronized FleetStateStats updateStatus() {
         final AmazonEC2 ec2=connect(credentialsId, region);
         final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
@@ -225,27 +257,33 @@ public class EC2FleetCloud extends Cloud
 
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
-        final Set<String> jenkinsInstances = new HashSet<String>();
+        instancesSeen.clear();
+        LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + join(", ", newInstances) + "]");
+        LOGGER.log(Level.FINE, "Jenkins contains dying instances [" + join(", ", instancesDying) + "]");
         for(final Node node : Jenkins.getInstance().getNodes()) {
             if (newInstances.contains(node.getNodeName())) {
-                newInstances.remove(node.getNodeName());
+                // instancesSeen should only have the intersection of nodes
+                // known by Jenkins and by the fleet.
                 instancesSeen.add(node.getNodeName());
+            } else if (instancesDying.contains(node.getNodeName())) {
+                LOGGER.log(Level.INFO, "Fleet (" + getLabelString() + ") no longer has the instance " + node.getNodeName() + ", removing from Jenkins.");
+                removeNode(node.getNodeName());
+                instancesDying.remove(node.getNodeName());
+                instancesSeen.remove(node.getNodeName());
             }
-            jenkinsInstances.add(node.getNodeName());
         }
+
+        // We should only keep dying instances that are still visible to both
+        // Jenkins and the fleet.
+        instancesDying.retainAll(instancesSeen);
+
+        // New instances are only ones that Jenkins hasn't seen
         newInstances.removeAll(instancesSeen);
-        newInstances.removeAll(instancesDying);
 
-        final List<String> instancesToRemove = new ArrayList<String>(instancesSeen.size());
-
+        // Update the label for all seen instances, unless they're dying
         for(final String instId : instancesSeen) {
             if (instancesDying.contains(instId))
                 continue;
-
-            if (!jenkinsInstances.contains(instId)) {
-                instancesToRemove.add(instId);
-                continue;
-            }
 
             Node node = Jenkins.getInstance().getNode(instId);
             if (node == null)
@@ -261,20 +299,10 @@ public class EC2FleetCloud extends Cloud
             }
         }
 
-        if (instancesToRemove.size() > 0) {
-            instancesSeen.removeAll(instancesToRemove);
-            try {
-                LOGGER.log(Level.INFO, "Instances unknown to Jenkins but appear in fleet: [" + String.join(", ", instancesToRemove) + "]");
-                ec2.terminateInstances(new TerminateInstancesRequest(instancesToRemove));
-            } catch (final Exception ex) {
-                LOGGER.log(Level.WARNING, "Unable to remove some instances. Exception: " + ex.toString());
-            }
-        }
-
         // If we have new instances - create nodes for them!
         try {
             if (newInstances.size() > 0) {
-                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" + String.join(", ", newInstances) + "]");
+                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" + join(", ", newInstances) + "]");
             }
             for(final String instanceId : newInstances) {
                 addNewSlave(ec2, instanceId);
@@ -334,50 +362,36 @@ public class EC2FleetCloud extends Cloud
     public synchronized boolean terminateInstance(final String instanceId) {
         LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
 
-        if (!instancesSeen.contains(instanceId) && !instancesDying.contains(instanceId))
-            throw new IllegalStateException("Unknown instance terminated: " + instanceId);
+        final FleetStateStats stats=updateStatus();
 
-        if (instancesDying.contains(instanceId)) {
-            final Jenkins jenkins=Jenkins.getInstance();
-
-            //noinspection SynchronizationOnLocalVariableOrMethodParameter
-            synchronized (jenkins) {
-                // If this node is dying, and its Computer is offline,
-                // remove it from Jenkins
-                final Node n = jenkins.getNode(instanceId);
-                if (n != null) {
-                    final Computer c = n.toComputer();
-                    if (c == null || c.isOffline()) {
-                        try {
-                            LOGGER.log(Level.INFO, "Node " + instanceId + " has gone offline after being terminated. Removing it from Jenkins.");
-                            jenkins.removeNode(n);
-                        } catch(final Exception ex) {
-                            throw new IllegalStateException(ex);
-                        }
-                    }
-                }
-            }
+        if (!instancesSeen.contains(instanceId)) {
+            LOGGER.log(Level.INFO, "Unknown instance terminated: " + instanceId);
             return false;
         }
 
-        final FleetStateStats stats=updateStatus();
-        // We can't remove instances beyond minSize
-        if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState()))
-            return false;
-
         final AmazonEC2 ec2 = connect(credentialsId, region);
 
-        final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
-        request.setSpotFleetRequestId(fleet);
-        request.setTargetCapacity(stats.getNumDesired() - 1);
-        request.setExcessCapacityTerminationPolicy("NoTermination");
-        ec2.modifySpotFleetRequest(request);
+        if (!instancesDying.contains(instanceId)) {
+            // We can't remove instances beyond minSize
+            if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState())) {
+                LOGGER.log(Level.INFO, "Not terminating " + instanceId + " because we need a minimum of " + Integer.toString(this.getMinSize()) + " instances running.");
+                return false;
+            }
 
-        ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
+            // These operations aren't idempotent so only do them once
+            final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
+            request.setSpotFleetRequestId(fleet);
+            request.setTargetCapacity(stats.getNumDesired() - 1);
+            request.setExcessCapacityTerminationPolicy("NoTermination");
+            ec2.modifySpotFleetRequest(request);
 
-        //And remove the instance
-        instancesSeen.remove(instanceId);
-        instancesDying.add(instanceId);
+            //And remove the instance
+            instancesDying.add(instanceId);
+        }
+
+        // terminateInstances is idempotent so it can be called until it's successful
+        final TerminateInstancesResult result = ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
+        LOGGER.log(Level.INFO, "Instance " + instanceId + " termination result: " + result.toString());
 
         return true;
     }
