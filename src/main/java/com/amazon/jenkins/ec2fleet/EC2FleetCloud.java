@@ -14,6 +14,7 @@ import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
+import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import com.cloudbees.plugins.credentials.CredentialsMatchers;
@@ -21,6 +22,7 @@ import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -71,31 +73,58 @@ public class EC2FleetCloud extends Cloud
     private final String fleet;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
+    private final String labelString;
     private final Integer idleMinutes;
+    private final Integer minSize;
     private final Integer maxSize;
+    private final Integer numExecutors;
     private @Nonnull FleetStateStats status;
 
     private final Set<NodeProvisioner.PlannedNode> plannedNodes =
             new HashSet<NodeProvisioner.PlannedNode>();
+    // instancesSeen are all nodes known to both Jenkins and the fleet
     private final Set<String> instancesSeen = new HashSet<String>();
+    // instancesDying are terminated nodes known to both Jenkins and the fleet,
+    // that are waiting for termination
     private final Set<String> instancesDying = new HashSet<String>();
+
+    private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
+
+    public static String join(final String separator, final Iterable<String> elements) {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (String i: elements) {
+            if (!isFirst) sb.append(separator);
+            else isFirst = false;
+            sb.append(i);
+        }
+        return sb.toString();
+    }
 
     @DataBoundConstructor
     public EC2FleetCloud(final String credentialsId,
-                         final String region, final String fleet,
+                         final String region,
+                         final String fleet,
+                         final String labelString,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
-                         final Integer idleMinutes, final Integer maxSize) {
+                         final Integer idleMinutes,
+                         final Integer minSize,
+                         final Integer maxSize,
+                         final Integer numExecutors) {
         super(FLEET_CLOUD_ID);
         this.credentialsId = credentialsId;
         this.region = region;
         this.fleet = fleet;
         this.computerConnector = computerConnector;
+        this.labelString = labelString;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
+        this.minSize = minSize;
         this.maxSize = maxSize;
+        this.numExecutors = numExecutors;
 
-        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet());
+        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), labelString);
     }
 
     public String getCredentialsId() {
@@ -118,12 +147,24 @@ public class EC2FleetCloud extends Cloud
         return privateIpUsed;
     }
 
+    public String getLabelString(){
+        return this.labelString;
+    }
+
     public Integer getIdleMinutes() {
         return idleMinutes;
     }
 
     public Integer getMaxSize() {
         return maxSize;
+    }
+
+    public Integer getMinSize() {
+        return minSize;
+    }
+
+    public Integer getNumExecutors() {
+        return numExecutors;
     }
 
     public String getJvmSettings() {
@@ -154,22 +195,32 @@ public class EC2FleetCloud extends Cloud
     @Override public synchronized Collection<NodeProvisioner.PlannedNode> provision(
             final Label label, final int excessWorkload) {
 
+
         final FleetStateStats stats=updateStatus();
         final int maxAllowed = this.getMaxSize();
 
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
+        int targetCapacity = stats.getNumDesired() + excessWorkload;
+
+        if (targetCapacity > maxAllowed)
+            targetCapacity = maxAllowed;
+
+        int toProvision = targetCapacity - stats.getNumDesired();
+
+        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(excessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
+
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
-        request.setTargetCapacity(stats.getNumDesired() + excessWorkload);
+        request.setTargetCapacity(targetCapacity);
 
         final AmazonEC2 ec2=connect(credentialsId, region);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList =
                 new ArrayList<NodeProvisioner.PlannedNode>();
-        for(int f=0;f<excessWorkload; ++f)
+        for(int f=0;f<toProvision; ++f)
         {
             final SettableFuture<Node> futureNode=SettableFuture.create();
             final NodeProvisioner.PlannedNode plannedNode=
@@ -180,37 +231,84 @@ public class EC2FleetCloud extends Cloud
         return resultList;
     }
 
+    private synchronized void removeNode(String instanceId) {
+        final Jenkins jenkins=Jenkins.getInstance();
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (jenkins) {
+            // If this node is dying, remove it from Jenkins
+            final Node n = jenkins.getNode(instanceId);
+            if (n != null) {
+                try {
+                    jenkins.removeNode(n);
+                } catch(final Exception ex) {
+                    LOGGER.log(Level.WARNING, "Error removing node " + instanceId);
+                    throw new IllegalStateException(ex);
+                }
+            }
+        }
+    }
+
     public synchronized FleetStateStats updateStatus() {
         final AmazonEC2 ec2=connect(credentialsId, region);
-        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet());
+        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
         status = curStatus;
+        LOGGER.log(Level.FINE, "Fleet Update Status called");
+        LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
 
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
-        final Set<String> jenkinsInstances = new HashSet<String>();
-        for(final Node node : Jenkins.getActiveInstance().getNodes()) {
-            newInstances.remove(node.getDisplayName());
-            jenkinsInstances.add(node.getDisplayName());
+        instancesSeen.clear();
+        LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + join(", ", newInstances) + "]");
+        LOGGER.log(Level.FINE, "Jenkins contains dying instances [" + join(", ", instancesDying) + "]");
+        for(final Node node : Jenkins.getInstance().getNodes()) {
+            if (newInstances.contains(node.getNodeName())) {
+                // instancesSeen should only have the intersection of nodes
+                // known by Jenkins and by the fleet.
+                instancesSeen.add(node.getNodeName());
+            } else if (instancesDying.contains(node.getNodeName())) {
+                LOGGER.log(Level.INFO, "Fleet (" + getLabelString() + ") no longer has the instance " + node.getNodeName() + ", removing from Jenkins.");
+                removeNode(node.getNodeName());
+                instancesDying.remove(node.getNodeName());
+                instancesSeen.remove(node.getNodeName());
+            }
         }
-        newInstances.removeAll(instancesSeen);
-        newInstances.removeAll(instancesDying);
 
-        // Instance unknown to Jenkins but known to Fleet. Terminate it.
+        // We should only keep dying instances that are still visible to both
+        // Jenkins and the fleet.
+        instancesDying.retainAll(instancesSeen);
+
+        // New instances are only ones that Jenkins hasn't seen
+        newInstances.removeAll(instancesSeen);
+
+        // Update the label for all seen instances, unless they're dying
         for(final String instId : instancesSeen) {
-            if (!instancesDying.contains(instId) &&
-                    !jenkinsInstances.contains(instId)) {
-                // Use a nuclear option to terminate an unknown instance
-                ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instId)));
+            if (instancesDying.contains(instId))
+                continue;
+
+            Node node = Jenkins.getInstance().getNode(instId);
+            if (node == null)
+                continue;
+
+            if (!this.labelString.equals(node.getLabelString())) {
+                try {
+                    LOGGER.log(Level.INFO, "Updating label on node " + instId + " to \"" + this.labelString + "\".");
+                    node.setLabelString(this.labelString);
+                } catch (final Exception ex) {
+                    LOGGER.log(Level.WARNING, "Unable to set label on node " + instId);
+                }
             }
         }
 
         // If we have new instances - create nodes for them!
-        for(final String instanceId : newInstances) {
-            try {
-                addNewSlave(ec2, instanceId);
-            } catch(final Exception ex) {
-                throw new IllegalStateException(ex);
+        try {
+            if (newInstances.size() > 0) {
+                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" + join(", ", newInstances) + "]");
             }
+            for(final String instanceId : newInstances) {
+                addNewSlave(ec2, instanceId);
+            }
+        } catch(final Exception ex) {
+            LOGGER.log(Level.WARNING, "Unable to add a new instance. Exception: " + ex.toString());
         }
 
         return curStatus;
@@ -233,18 +331,18 @@ public class EC2FleetCloud extends Cloud
             return; // Wait some more...
 
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
-                fsRoot, "1", Node.Mode.NORMAL, "ec2-fleet", new ArrayList<NodeProperty<?>>(),
+                fsRoot, this.numExecutors.toString(), Node.Mode.NORMAL, this.labelString, new ArrayList<NodeProperty<?>>(),
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
         if (getIdleMinutes() != null)
             slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
 
-        final Jenkins jenkins=Jenkins.getActiveInstance();
+        final Jenkins jenkins=Jenkins.getInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (jenkins) {
             // Try to avoid duplicate nodes
-            final Node n = jenkins.getNode(name);
+            final Node n = jenkins.getNode(instanceId);
             if (n != null)
                 jenkins.removeNode(n);
             jenkins.addNode(slave);
@@ -261,37 +359,52 @@ public class EC2FleetCloud extends Cloud
         }
     }
 
-    public synchronized void terminateInstance(final String instanceId) {
-        if (!instancesSeen.contains(instanceId) || instancesDying.contains(instanceId))
-            throw new IllegalStateException("Unknown instance terminated: " + instanceId);
+    public synchronized boolean terminateInstance(final String instanceId) {
+        LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
 
         final FleetStateStats stats=updateStatus();
-        //We can't remove the last instance
-        if (stats.getNumDesired() == 1 || !"active".equals(stats.getState()))
-            return;
+
+        if (!instancesSeen.contains(instanceId)) {
+            LOGGER.log(Level.INFO, "Unknown instance terminated: " + instanceId);
+            return false;
+        }
 
         final AmazonEC2 ec2 = connect(credentialsId, region);
 
-        final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
-        request.setSpotFleetRequestId(fleet);
-        request.setTargetCapacity(stats.getNumDesired() - 1);
-        request.setExcessCapacityTerminationPolicy("NoTermination");
-        ec2.modifySpotFleetRequest(request);
+        if (!instancesDying.contains(instanceId)) {
+            // We can't remove instances beyond minSize
+            if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState())) {
+                LOGGER.log(Level.INFO, "Not terminating " + instanceId + " because we need a minimum of " + Integer.toString(this.getMinSize()) + " instances running.");
+                return false;
+            }
 
-        ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
+            // These operations aren't idempotent so only do them once
+            final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
+            request.setSpotFleetRequestId(fleet);
+            request.setTargetCapacity(stats.getNumDesired() - 1);
+            request.setExcessCapacityTerminationPolicy("NoTermination");
+            ec2.modifySpotFleetRequest(request);
 
-        //And remove the instance
-        instancesSeen.remove(instanceId);
-        instancesDying.add(instanceId);
+            //And remove the instance
+            instancesDying.add(instanceId);
+        }
+
+        // terminateInstances is idempotent so it can be called until it's successful
+        final TerminateInstancesResult result = ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
+        LOGGER.log(Level.INFO, "Instance " + instanceId + " termination result: " + result.toString());
+
+        return true;
     }
 
     @Override public boolean canProvision(final Label label) {
-        return fleet != null;
+        boolean result = fleet != null && Label.parse(this.labelString).containsAll(label.listAtoms());
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + label.getName() + "\". Returning " + Boolean.toString(result) + ".");
+        return result;
     }
 
     private static AmazonEC2 connect(final String credentialsId, final String region) {
 
-        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getActiveInstance());
+        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getInstance());
         final AmazonEC2Client client =
                 credentials != null ?
                         new AmazonEC2Client(credentials) :
@@ -300,6 +413,7 @@ public class EC2FleetCloud extends Cloud
             client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
         return client;
     }
+
 
     @Extension
     @SuppressWarnings("unused")
@@ -324,11 +438,11 @@ public class EC2FleetCloud extends Cloud
         }
 
         public List getComputerConnectorDescriptors() {
-            return Jenkins.getActiveInstance().getDescriptorList(ComputerConnector.class);
+            return Jenkins.getInstance().getDescriptorList(ComputerConnector.class);
         }
 
         public ListBoxModel doFillCredentialsIdItems() {
-            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getActiveInstance());
+            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getInstance());
         }
 
         public ListBoxModel doFillRegionItems(@QueryParameter final String credentialsId,

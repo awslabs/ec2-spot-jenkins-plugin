@@ -8,6 +8,8 @@ import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * User: cyberax
@@ -18,11 +20,14 @@ import java.util.List;
 @SuppressWarnings("unused")
 public class CloudNanny extends PeriodicWork
 {
+    private static final Logger LOGGER = Logger.getLogger(CloudNanny.class.getName());
+
     @Override public long getRecurrencePeriod() {
         return 10000L;
     }
 
     @Override protected void doRun() throws Exception {
+
         // Trigger reprovisioning as well
         Jenkins.getActiveInstance().unlabeledNodeProvisioner.suggestReviewNow();
 
@@ -33,6 +38,7 @@ public class CloudNanny extends PeriodicWork
 
             // Update the cluster states
             final EC2FleetCloud fleetCloud =(EC2FleetCloud) cloud;
+            LOGGER.log(Level.FINE, "Checking cloud: " + fleetCloud.getLabelString() );
             stats.add(fleetCloud.updateStatus());
         }
 
