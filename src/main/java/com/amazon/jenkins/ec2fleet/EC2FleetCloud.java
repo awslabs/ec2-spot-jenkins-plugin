@@ -71,6 +71,7 @@ public class EC2FleetCloud extends Cloud
     private final String credentialsId;
     private final String region;
     private final String fleet;
+    private final String fsRoot;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
     private final String labelString;
@@ -106,6 +107,7 @@ public class EC2FleetCloud extends Cloud
                          final String region,
                          final String fleet,
                          final String labelString,
+                         final String fsRoot,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
                          final Integer idleMinutes,
@@ -116,6 +118,7 @@ public class EC2FleetCloud extends Cloud
         this.credentialsId = credentialsId;
         this.region = region;
         this.fleet = fleet;
+        this.fsRoot = fsRoot;
         this.computerConnector = computerConnector;
         this.labelString = labelString;
         this.idleMinutes = idleMinutes;
@@ -315,8 +318,11 @@ public class EC2FleetCloud extends Cloud
     }
 
     private void addNewSlave(final AmazonEC2 ec2, final String instanceId) throws Exception {
-        // Generate a random FS root
-        final String fsRoot = "/tmp/jenkins-"+UUID.randomUUID().toString().substring(0, 8);
+        // Generate a random FS root if one isn't specified
+        String fsRoot = this.fsRoot;
+        if (fsRoot == null || fsRoot.equals("")) {
+            fsRoot = "/tmp/jenkins-"+UUID.randomUUID().toString().substring(0, 8);
+        }
 
         final DescribeInstancesResult result=ec2.describeInstances(
                 new DescribeInstancesRequest().withInstanceIds(instanceId));
@@ -397,8 +403,8 @@ public class EC2FleetCloud extends Cloud
     }
 
     @Override public boolean canProvision(final Label label) {
-        boolean result = fleet != null && Label.parse(this.labelString).containsAll(label.listAtoms());
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + label.getName() + "\". Returning " + Boolean.toString(result) + ".");
+        boolean result = fleet != null && (label == null || Label.parse(this.labelString).containsAll(label.listAtoms()));
+        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\". Returning " + Boolean.toString(result) + ".");
         return result;
     }
 
