@@ -11,9 +11,7 @@ the fleet within the specified price range. For more information, see
 # Usage
 An AWS account is required to use this plugin: [Sign up for an AWS account](https://portal.aws.amazon.com/gp/aws/developer/registration/index.html).
 
-Once you have an account, create an IAM user with sufficient permissions to launch Spot Fleets ( 
-[Spot Fleet Prerequisites](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites 
-"Spot Fleet Prerequisites") ) and get its AWS credentials.
+Once you have an account, create an IAM user with sufficient permissions to launch Spot Fleets ([Spot Fleet Prerequisites](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites "Spot Fleet Prerequisites")) and get its AWS credentials.
 
 Next, deploy a Spot Fleet that will serve as the build fleet for Jenkins. You can launch a Spot Fleet from the 
 [AWS console](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet)
