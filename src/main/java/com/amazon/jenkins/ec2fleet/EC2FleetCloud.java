@@ -97,6 +97,7 @@ public class EC2FleetCloud extends Cloud {
     private final Integer numExecutors;
     private final boolean addNodeOnlyIfRunning;
     private final boolean restrictUsage;
+    private final boolean scaleExecutorsByWeight;
 
     private transient Set<NodeProvisioner.PlannedNode> plannedNodesCache;
     // fleetInstancesCache contains all Jenkins nodes known to be in the fleet, not in dyingFleetInstancesCache
@@ -120,7 +121,8 @@ public class EC2FleetCloud extends Cloud {
                          final Integer maxSize,
                          final Integer numExecutors,
                          final boolean addNodeOnlyIfRunning,
-                         final boolean restrictUsage) {
+                         final boolean restrictUsage,
+                         final boolean scaleExecutorsByWeight) {
         super(StringUtils.isBlank(name) ? FLEET_CLOUD_ID : name);
         initCaches();
         this.credentialsId = credentialsId;
@@ -138,6 +140,7 @@ public class EC2FleetCloud extends Cloud {
         this.numExecutors = numExecutors;
         this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
+        this.scaleExecutorsByWeight = scaleExecutorsByWeight;
     }
 
     /**
@@ -196,6 +199,10 @@ public class EC2FleetCloud extends Cloud {
 
     public Integer getNumExecutors() {
         return numExecutors;
+    }
+
+    public boolean isScaleExecutorsByWeight() {
+        return scaleExecutorsByWeight;
     }
 
     public String getJvmSettings() {
@@ -365,7 +372,7 @@ public class EC2FleetCloud extends Cloud {
                         StringUtils.join(newFleetInstances, ", ") + "]");
             }
             for (final String instanceId : newFleetInstances) {
-                addNewSlave(ec2, instanceId);
+                addNewSlave(ec2, instanceId, stats);
             }
         } catch (final Exception ex) {
             LOGGER.log(Level.WARNING, "Unable to add a new instance.", ex);
@@ -465,7 +472,7 @@ public class EC2FleetCloud extends Cloud {
         }
     }
 
-    private void addNewSlave(final AmazonEC2 ec2, final String instanceId) throws Exception {
+    private void addNewSlave(final AmazonEC2 ec2, final String instanceId, FleetStateStats stats) throws Exception {
         // Generate a random FS root if one isn't specified
         String effectiveFsRoot = fsRoot;
         if (StringUtils.isBlank(effectiveFsRoot)) {
@@ -487,9 +494,18 @@ public class EC2FleetCloud extends Cloud {
         // Check if we have the address to use. Nodes don't get it immediately.
         if (address == null) return; // Wait some more...
 
+        int numExecutors;
+        if (scaleExecutorsByWeight) {
+            Double instanceTypeWeight = stats.getInstanceTypeWeight(instance.getInstanceType());
+            Double instanceWeight = Math.ceil(this.numExecutors * instanceTypeWeight);
+            numExecutors = instanceWeight.intValue();
+        } else {
+            numExecutors = this.numExecutors;
+        }
+
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for " + instanceId,
-                effectiveFsRoot, numExecutors.toString(), nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
+                effectiveFsRoot, numExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
                 name, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
