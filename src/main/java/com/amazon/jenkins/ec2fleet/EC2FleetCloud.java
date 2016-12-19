@@ -17,17 +17,13 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
-import com.cloudbees.plugins.credentials.CredentialsMatchers;
-import com.cloudbees.plugins.credentials.CredentialsProvider;
-import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
+import com.google.common.base.Strings;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
-import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.TaskListener;
-import hudson.security.ACL;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProperty;
@@ -79,6 +75,7 @@ public class EC2FleetCloud extends Cloud
     private final Integer minSize;
     private final Integer maxSize;
     private final Integer numExecutors;
+    private final Boolean scaleExecutorsByWeight;
     private @Nonnull FleetStateStats status;
 
     private final Set<NodeProvisioner.PlannedNode> plannedNodes =
@@ -113,7 +110,8 @@ public class EC2FleetCloud extends Cloud
                          final Integer idleMinutes,
                          final Integer minSize,
                          final Integer maxSize,
-                         final Integer numExecutors) {
+                         final Integer numExecutors,
+                         final Boolean scaleExecutorsByWeight) {
         super(FLEET_CLOUD_ID);
         this.credentialsId = credentialsId;
         this.region = region;
@@ -126,8 +124,9 @@ public class EC2FleetCloud extends Cloud
         this.minSize = minSize;
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
+        this.scaleExecutorsByWeight = scaleExecutorsByWeight;
 
-        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), labelString);
+        this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), Collections.<String, Double>emptyMap(), labelString);
     }
 
     public String getCredentialsId() {
@@ -168,6 +167,10 @@ public class EC2FleetCloud extends Cloud
 
     public Integer getNumExecutors() {
         return numExecutors;
+    }
+
+    public Boolean getScaleExecutorsByWeight() {
+        return scaleExecutorsByWeight;
     }
 
     public String getJvmSettings() {
@@ -252,8 +255,14 @@ public class EC2FleetCloud extends Cloud
     }
 
     public synchronized FleetStateStats updateStatus() {
+        final String fleetId = getFleet();
+        if (Strings.isNullOrEmpty(fleetId)) {
+            LOGGER.log(Level.FINE, "Skipping Fleet Update Status as `fleet` undefined.");
+            return status;
+        }
         final AmazonEC2 ec2=connect(credentialsId, region);
-        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
+
+        final FleetStateStats curStatus=FleetStateStats.readClusterState(ec2, fleetId, this.labelString);
         status = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
         LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
@@ -336,8 +345,17 @@ public class EC2FleetCloud extends Cloud
         if (address == null)
             return; // Wait some more...
 
+        String numExecutors;
+        if (Boolean.TRUE.equals(scaleExecutorsByWeight)) {
+            Double instanceTypeWeight = status.getInstanceTypeWeight(instance.getInstanceType());
+            Double instanceWeight = Double.valueOf(Math.ceil(this.numExecutors * instanceTypeWeight));
+            numExecutors = String.valueOf(instanceWeight.intValue());
+        } else {
+            numExecutors = String.valueOf(this.numExecutors);
+        }
+
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for" + instanceId,
-                fsRoot, this.numExecutors.toString(), Node.Mode.NORMAL, this.labelString, new ArrayList<NodeProperty<?>>(),
+                fsRoot, numExecutors, Node.Mode.NORMAL, this.labelString, new ArrayList<NodeProperty<?>>(),
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
