@@ -216,6 +216,8 @@ public class EC2FleetCloud extends Cloud
 
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
+        
+        int targetCapacity = (stats.getNumDesired() + excessWorkload >= maxAllowed)?maxAllowed:(stats.getNumDesired() + excessWorkload);
         request.setTargetCapacity(targetCapacity);
 
         final AmazonEC2 ec2=connect(credentialsId, region);
