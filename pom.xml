@@ -41,7 +41,7 @@
     <connection>scm:git:ssh://github.com/jenkinsci/ec2-fleet-plugin.git</connection>
     <developerConnection>scm:git:ssh://git@github.com/jenkinsci/ec2-fleet-plugin.git</developerConnection>
     <url>https://github.com/jenkinsci/ec2-fleet-plugin</url>
-    <tag>HEAD</tag>
+    <tag>ec2-fleet-1.1</tag>
   </scm>
 
   <repositories>
