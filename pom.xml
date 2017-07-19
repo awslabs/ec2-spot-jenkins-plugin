@@ -65,6 +65,11 @@
   <dependencies>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
+      <artifactId>credentials</artifactId>
+      <version>2.1.13</version>
+    </dependency>
+    <dependency>
+      <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
       <version>1.11.119</version>
     </dependency>
