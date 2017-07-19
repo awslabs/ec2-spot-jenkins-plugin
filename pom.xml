@@ -83,19 +83,11 @@
   <build>
     <plugins>
       <plugin>
-      <!-- Disabling FindBugs temporarily -->
+        <!-- Disabling FindBugs failOnError temporarily -->
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>findbugs-maven-plugin</artifactId>
         <configuration>
-          <skip>true</skip>
-        </configuration>
-      </plugin>
-      <!-- Disabling TestInjection temporarily -->
-      <plugin>
-        <groupId>org.jenkins-ci.tools</groupId>
-        <artifactId>maven-hpi-plugin</artifactId>
-        <configuration>
-          <disabledTestInjection>true</disabledTestInjection>
+          <failOnError>false</failOnError>
         </configuration>
       </plugin>
     </plugins>
