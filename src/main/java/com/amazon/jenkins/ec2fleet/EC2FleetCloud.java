@@ -209,14 +209,17 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
-        int targetCapacity = stats.getNumDesired() + excessWorkload;
+	// Presumably ceil() would also be correct but I think round() works best for
+	// scenarios when numExecutors is of reasonable size.
+        int weightedExcessWorkload = Math.round((float)excessWorkload / this.numExecutors);
+        int targetCapacity = stats.getNumDesired() + weightedExcessWorkload;
 
         if (targetCapacity > maxAllowed)
             targetCapacity = maxAllowed;
 
         int toProvision = targetCapacity - stats.getNumDesired();
 
-        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(excessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
+        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(weightedExcessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
 
         final ModifySpotFleetRequestRequest request=new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
@@ -231,7 +234,7 @@ public class EC2FleetCloud extends Cloud
         {
             final SettableFuture<Node> futureNode=SettableFuture.create();
             final NodeProvisioner.PlannedNode plannedNode=
-                    new NodeProvisioner.PlannedNode("FleetNode-"+f, futureNode, 1);
+                    new NodeProvisioner.PlannedNode("FleetNode-"+f, futureNode, this.numExecutors);
             resultList.add(plannedNode);
             this.plannedNodes.add(plannedNode);
         }
