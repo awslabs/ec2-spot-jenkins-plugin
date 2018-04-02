@@ -209,9 +209,7 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
-	// Presumably ceil() would also be correct but I think round() works best for
-	// scenarios when numExecutors is of reasonable size.
-        int weightedExcessWorkload = Math.round((float)excessWorkload / this.numExecutors);
+        int weightedExcessWorkload = Math.ceil((float)excessWorkload / this.numExecutors);
         int targetCapacity = stats.getNumDesired() + weightedExcessWorkload;
 
         if (targetCapacity > maxAllowed)
