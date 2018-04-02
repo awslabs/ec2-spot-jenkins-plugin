@@ -209,6 +209,10 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
+        // Ensure we don't divide by 0, below
+        if (this.numExecutors == 0)
+            return Collections.emptyList();
+
         // Calculate the ceiling, without having to work with doubles from Math.ceil
         // https://stackoverflow.com/a/21830188/877024
         int weightedExcessWorkload = (excessWorkload - 1) / this.numExecutors + 1;
