@@ -398,7 +398,7 @@ public class EC2FleetCloud extends Cloud
             final NodeProvisioner.PlannedNode curNode=plannedNodes.iterator().next();
             plannedNodes.remove(curNode);
             ((SettableFuture<Node>)curNode.future).set(slave);
-            instancesBooting.add(slave.getNodeName())
+            instancesBooting.add(slave.getNodeName());
         }
     }
 
