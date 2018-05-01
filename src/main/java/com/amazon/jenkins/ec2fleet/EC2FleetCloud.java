@@ -88,6 +88,7 @@ public class EC2FleetCloud extends Cloud
     // instancesDying are terminated nodes known to both Jenkins and the fleet,
     // that are waiting for termination
     private final Set<String> instancesDying = new HashSet<String>();
+    private Set<String> instancesBooting;
 
     private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
 
@@ -127,6 +128,7 @@ public class EC2FleetCloud extends Cloud
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
 
+        this.instancesBooting = new HashSet<String>();
         this.status = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), labelString);
     }
 
@@ -209,9 +211,25 @@ public class EC2FleetCloud extends Cloud
         if (stats.getNumDesired() >= maxAllowed || !"active".equals(stats.getState()))
             return Collections.emptyList();
 
-	// Presumably ceil() would also be correct but I think round() works best for
-	// scenarios when numExecutors is of reasonable size.
-        int weightedExcessWorkload = Math.round((float)excessWorkload / this.numExecutors);
+        // Count the number of nodes still booting
+        int numNodesBooting = 0;
+        Jenkins jenkins = Jenkins.getInstance();
+        synchronized (jenkins) {
+            for (final Node node : jenkins.getNodes()) {
+                if (this.labelString.equals(node.getLabelString()))
+                    if (instancesBooting.contains(node.getNodeName()))
+                        numNodesBooting += 1;
+            }
+        }
+
+        // if the planned node has 0 executors configured force it to 1 so we end up doing an unweighted check
+        final int numExecutors = this.numExecutors == 0 ? 1 : this.numExecutors;
+        // Recalculate the excess taking the number of booting nodes into account
+        int effectiveExcessWorkload = excessWorkload - (numNodesBooting * numExecutors);
+
+        // Calculate the ceiling, without having to work with doubles from Math.ceil
+        // https://stackoverflow.com/a/21830188/877024
+        final int weightedExcessWorkload = (effectiveExcessWorkload + numExecutors - 1) / numExecutors;
         int targetCapacity = stats.getNumDesired() + weightedExcessWorkload;
 
         if (targetCapacity > maxAllowed)
@@ -219,7 +237,7 @@ public class EC2FleetCloud extends Cloud
 
         int toProvision = targetCapacity - stats.getNumDesired();
 
-        if (toProvision == 0)
+        if (toProvision < 1)
             return Collections.emptyList();
 
         LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(weightedExcessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
@@ -268,6 +286,10 @@ public class EC2FleetCloud extends Cloud
         LOGGER.log(Level.FINE, "Fleet Update Status called");
         LOGGER.log(Level.FINE, "# of nodes:" + Jenkins.getInstance().getNodes().size());
 
+        // Initialize instancesBooting if initialization in constructor failed
+        if (instancesBooting == null)
+            instancesBooting = new HashSet<String>();
+
         // Check the nodes to see if we have some new ones
         final Set<String> newInstances = new HashSet<String>(curStatus.getInstances());
         instancesSeen.clear();
@@ -284,6 +306,10 @@ public class EC2FleetCloud extends Cloud
                 instancesDying.remove(node.getNodeName());
                 instancesSeen.remove(node.getNodeName());
             }
+            Computer computer = node.toComputer();
+            if (computer != null)
+                if (instancesBooting.contains(node.getNodeName()) && computer.isOnline())
+                    instancesBooting.remove(node.getNodeName());
         }
 
         // We should only keep dying instances that are still visible to both
@@ -372,6 +398,7 @@ public class EC2FleetCloud extends Cloud
             final NodeProvisioner.PlannedNode curNode=plannedNodes.iterator().next();
             plannedNodes.remove(curNode);
             ((SettableFuture<Node>)curNode.future).set(slave);
+            instancesBooting.add(slave.getNodeName())
         }
     }
 
