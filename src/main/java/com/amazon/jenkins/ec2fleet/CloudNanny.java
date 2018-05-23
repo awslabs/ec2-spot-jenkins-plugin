@@ -2,12 +2,14 @@ package com.amazon.jenkins.ec2fleet;
 
 import hudson.Extension;
 import hudson.model.PeriodicWork;
+import hudson.model.Queue;
 import hudson.slaves.Cloud;
 import hudson.widgets.Widget;
 import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -39,7 +41,14 @@ public class CloudNanny extends PeriodicWork
             // Update the cluster states
             final EC2FleetCloud fleetCloud =(EC2FleetCloud) cloud;
             LOGGER.log(Level.FINE, "Checking cloud: " + fleetCloud.getLabelString() );
-            stats.add(fleetCloud.updateStatus());
+            stats.add(Queue.withLock(new Callable<FleetStateStats>() {
+                @Override
+                public FleetStateStats call()
+                        throws Exception
+                {
+                    return fleetCloud.updateStatus();
+                }
+            }));
         }
 
         for (final Widget w : Jenkins.getInstance().getWidgets()) {

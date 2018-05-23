@@ -22,6 +22,7 @@ import hudson.Extension;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Queue;
 import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
@@ -47,6 +48,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.LogRecord;
 import java.util.logging.Logger;
@@ -206,7 +208,25 @@ public class EC2FleetCloud extends Cloud
         }
     }
 
-    @Override public synchronized Collection<NodeProvisioner.PlannedNode> provision(
+    @Override public Collection<NodeProvisioner.PlannedNode> provision(
+            final Label label, final int excessWorkload) {
+        try {
+            return Queue.withLock(new Callable<Collection<NodeProvisioner.PlannedNode>>()
+            {
+                @Override
+                public Collection<NodeProvisioner.PlannedNode> call()
+                        throws Exception
+                {
+                    return provisionInternal(label, excessWorkload);
+                }
+            });
+        } catch (Exception exception) {
+            LOGGER.log(Level.WARNING, "provisionInternal failed", exception);
+            throw new IllegalStateException(exception);
+        }
+    }
+
+    public synchronized Collection<NodeProvisioner.PlannedNode> provisionInternal(
             final Label label, final int excessWorkload) {
 
 
