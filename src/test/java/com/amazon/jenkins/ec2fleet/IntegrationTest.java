@@ -55,7 +55,7 @@ public class IntegrationTest {
 
     @Test
     public void shouldShowInConfigurationClouds() throws IOException, SAXException {
-        Cloud cloud = new EC2FleetCloud(null, null, null, null,
+        Cloud cloud = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0);
         j.jenkins.clouds.add(cloud);
@@ -80,7 +80,7 @@ public class IntegrationTest {
         withFleet(awsCredentials, targetCapacity, new WithFleetBody() {
             @Override
             public void run(AmazonEC2 amazonEC2, String fleetId) throws Exception {
-                EC2FleetCloud cloud = new EC2FleetCloud("credId", null, null, fleetId,
+                EC2FleetCloud cloud = new EC2FleetCloud(null,"credId", null, null, fleetId,
                         null, null, null, false, false,
                         0, 0, 0, 0);
                 j.jenkins.clouds.add(cloud);
@@ -113,7 +113,7 @@ public class IntegrationTest {
         withFleet(awsCredentials, targetCapacity, new WithFleetBody() {
             @Override
             public void run(AmazonEC2 amazonEC2, String fleetId) throws Exception {
-                EC2FleetCloud cloud = new EC2FleetCloud("credId", null, null, fleetId,
+                EC2FleetCloud cloud = new EC2FleetCloud(null,"credId", null, null, fleetId,
                         null, null, null, false, false,
                         0, 0, 0, 0);
                 j.jenkins.clouds.add(cloud);
