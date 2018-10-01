@@ -29,7 +29,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
         long maxAge = maxIdleMinutes*60*1000;
         LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
-        return System.currentTimeMillis()-c.getIdleStartMilliseconds() > (maxIdleMinutes*60*1000);
+        return age > maxAge;
     }
 
     @Override public long check(final SlaveComputer c) {
