@@ -53,9 +53,6 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
                     }
-                } else {
-                    if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
-                        c.tryReconnect();
                 }
             } finally {
                 c.setAcceptingTasks(shouldAcceptTasks);
@@ -63,5 +60,10 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         }
 
         return 1;
+    }
+
+    @Override public void start(SlaveComputer c) {
+        LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
+        c.connect(false);
     }
 }
