@@ -2,8 +2,11 @@ package com.amazon.jenkins.ec2fleet;
 
 import hudson.model.Computer;
 import hudson.model.Node;
+import hudson.slaves.Messages;
+import hudson.slaves.OfflineCause.SimpleOfflineCause;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
+import java.lang.InterruptedException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -42,18 +45,24 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
             c.setAcceptingTasks(false);
             try {
                 if (isIdleForTooLong(c)) {
+                    // node no longer eligible for tasks after idle timeout
+                    shouldAcceptTasks = false;
                     // Find instance ID
                     Node compNode = c.getNode();
                     if (compNode == null) {
                         return 0;
                     }
-
                     final String nodeId = compNode.getNodeName();
-                    if (parent.terminateInstance(nodeId)) {
-                        // Instance successfully terminated, so no longer accept tasks
-                        shouldAcceptTasks = false;
+                    // disconnect and then terminate
+                    if (c.isOnline()) {
+                        c.disconnect(SimpleOfflineCause.create(
+                            Messages._RetentionStrategy_Demand_OfflineIdle()));
+                        c.waitUntilOffline();
                     }
+                    parent.terminateInstance(nodeId);
                 }
+            } catch (InterruptedException e) {
+                LOGGER.log(Level.WARNING, "Interrupted while diconnecting " + c.getDisplayName());
             } finally {
                 c.setAcceptingTasks(shouldAcceptTasks);
             }
