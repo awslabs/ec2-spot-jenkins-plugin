@@ -19,6 +19,7 @@ import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
+import hudson.model.Computer;
 import hudson.model.Descriptor;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -26,8 +27,10 @@ import hudson.model.Queue;
 import hudson.model.TaskListener;
 import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
+import hudson.slaves.Messages;
 import hudson.slaves.NodeProperty;
 import hudson.slaves.NodeProvisioner;
+import hudson.slaves.OfflineCause.SimpleOfflineCause;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
@@ -41,6 +44,7 @@ import javax.annotation.Nonnull;
 import javax.servlet.ServletException;
 import java.io.IOException;
 import java.io.PrintStream;
+import java.lang.InterruptedException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -435,6 +439,21 @@ public class EC2FleetCloud extends Cloud
             instancesDyingCache.add(instanceId);
         }
 
+        // disconnect the node before terminating the instance
+        final Jenkins jenkins=Jenkins.getInstance();
+        synchronized (jenkins) {
+            final Computer c = jenkins.getNode(instanceId).toComputer();
+            if (c.isOnline()) {
+                c.disconnect(SimpleOfflineCause.create(
+                    Messages._SlaveComputer_DisconnectedBy(this.FLEET_CLOUD_ID, this.fleet)));
+            }
+        }
+        final Computer c = jenkins.getNode(instanceId).toComputer();
+        try {
+            c.waitUntilOffline();
+        } catch (InterruptedException e) {
+            LOGGER.log(Level.WARNING, "Interrupted while diconnecting " + c.getDisplayName());
+        }
         // terminateInstances is idempotent so it can be called until it's successful
         final TerminateInstancesResult result = ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
         LOGGER.log(Level.INFO, "Instance " + instanceId + " termination result: " + result.toString());
