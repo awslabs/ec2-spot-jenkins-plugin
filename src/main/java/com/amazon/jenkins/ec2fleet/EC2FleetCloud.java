@@ -76,6 +76,7 @@ public class EC2FleetCloud extends Cloud
     private final String fsRoot;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
+    private final boolean alwaysReconnect;
     private final String labelString;
     private final Integer idleMinutes;
     private final Integer minSize;
@@ -112,6 +113,7 @@ public class EC2FleetCloud extends Cloud
                          final String fsRoot,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
+                         final boolean alwaysReconnect,
                          final Integer idleMinutes,
                          final Integer minSize,
                          final Integer maxSize,
@@ -126,6 +128,7 @@ public class EC2FleetCloud extends Cloud
         this.labelString = labelString;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
+        this.alwaysReconnect = alwaysReconnect;
         this.minSize = minSize;
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
@@ -165,6 +168,10 @@ public class EC2FleetCloud extends Cloud
 
     public boolean isPrivateIpUsed() {
         return privateIpUsed;
+    }
+
+    public boolean isAlwaysReconnectSet() {
+        return alwaysReconnect;
     }
 
     public String getLabelString(){
@@ -529,6 +536,7 @@ public class EC2FleetCloud extends Cloud
         public String fleet;
         public String userName="root";
         public boolean privateIpUsed;
+        public boolean alwaysReconnect;
         public String privateKey;
 
         public DescriptorImpl() {
