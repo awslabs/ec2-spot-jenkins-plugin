@@ -45,6 +45,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
             // Ensure nobody provisions onto this node until we've done
             // checking
             boolean shouldAcceptTasks = c.isAcceptingTasks();
+            boolean justTerminated = false;
             c.setAcceptingTasks(false);
             try {
                 if (isIdleForTooLong(c)) {
@@ -58,8 +59,11 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
                     if (parent.terminateInstance(nodeId)) {
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
+                        justTerminated = true;
                     }
-                } else if (alwaysReconnect && c.isOffline() && !c.isConnecting() && c.isLaunchSupported()) {
+                }
+
+                if (alwaysReconnect && !justTerminated && c.isOffline() && !c.isConnecting() && c.isLaunchSupported()) {
                     LOGGER.log(Level.INFO, "Reconnecting to instance: " + c.getDisplayName());
                     c.tryReconnect();
                 }
