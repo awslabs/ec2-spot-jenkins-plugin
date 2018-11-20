@@ -47,8 +47,10 @@
     <f:entry title="${%Number of Executors}" field="numExecutors">
       <f:textbox clazz="required positive-number" default="1" />
     </f:entry>
+    <f:description>0 for no scaledown
+    </f:description>
     <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
-      <f:number clazz="positive-number"/>
+      <f:number clazz="required number" min="0" default="0" />
     </f:entry>
     <f:entry title="${%Minimum Cluster Size}" field="minSize">
       <f:number clazz="required number" min="0" default="1" />

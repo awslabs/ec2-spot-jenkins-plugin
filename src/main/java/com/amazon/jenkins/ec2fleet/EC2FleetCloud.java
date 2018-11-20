@@ -178,8 +178,8 @@ public class EC2FleetCloud extends Cloud
         return this.labelString;
     }
 
-    public Integer getIdleMinutes() {
-        return idleMinutes;
+    public int getIdleMinutes() {
+        return (idleMinutes != null) ? idleMinutes : 0;
     }
 
     public Integer getMaxSize() {
