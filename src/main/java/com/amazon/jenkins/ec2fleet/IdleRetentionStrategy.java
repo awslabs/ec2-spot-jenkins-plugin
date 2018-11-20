@@ -15,12 +15,14 @@ import java.util.logging.Logger;
 public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
 {
     private final int maxIdleMinutes;
+    private final boolean alwaysReconnect;
     private final EC2FleetCloud parent;
 
     private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
     public IdleRetentionStrategy(final EC2FleetCloud parent) {
         this.maxIdleMinutes = parent.getIdleMinutes();
+        this.alwaysReconnect = parent.isAlwaysReconnectSet();
         this.parent = parent;
         LOGGER.log(Level.INFO, "Idle Retention initiated");
     }
@@ -57,6 +59,9 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
                     }
+                } else if (alwaysReconnect && c.isOffline() && !c.isConnecting() && c.isLaunchSupported()) {
+                    LOGGER.log(Level.INFO, "Reconnecting to instance: " + c.getDisplayName());
+                    c.tryReconnect();
                 }
             } finally {
                 c.setAcceptingTasks(shouldAcceptTasks);
