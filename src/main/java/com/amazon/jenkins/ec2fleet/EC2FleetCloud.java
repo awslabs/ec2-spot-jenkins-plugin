@@ -432,8 +432,7 @@ public class EC2FleetCloud extends Cloud
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
-        if (getIdleMinutes() != null)
-            slave.setRetentionStrategy(new IdleRetentionStrategy(this));
+        slave.setRetentionStrategy(new IdleRetentionStrategy(this));
 
         final Jenkins jenkins=Jenkins.getInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter

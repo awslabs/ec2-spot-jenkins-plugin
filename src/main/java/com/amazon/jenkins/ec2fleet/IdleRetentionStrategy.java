@@ -26,10 +26,14 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
     }
 
     protected boolean isIdleForTooLong(final Computer c) {
-        long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
-        long maxAge = maxIdleMinutes*60*1000;
-        LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
-        return age > maxAge;
+        boolean isTooLong = false;
+        if(maxIdleMinutes != null) {
+            long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
+            long maxAge = maxIdleMinutes*60*1000;
+            LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
+            isTooLong = age > maxAge;
+        }
+        return isTooLong;
     }
 
     @Override public long check(final SlaveComputer c) {
