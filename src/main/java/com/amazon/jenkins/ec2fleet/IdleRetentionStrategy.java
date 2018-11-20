@@ -22,7 +22,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
 
     public IdleRetentionStrategy(final EC2FleetCloud parent) {
         this.maxIdleMinutes = parent.getIdleMinutes();
-        this.alwaysReconnect = parent.isAlwaysReconnectSet();
+        this.alwaysReconnect = parent.isAlwaysReconnect();
         this.parent = parent;
         LOGGER.log(Level.INFO, "Idle Retention initiated");
     }

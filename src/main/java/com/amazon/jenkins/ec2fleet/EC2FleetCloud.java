@@ -170,7 +170,7 @@ public class EC2FleetCloud extends Cloud
         return privateIpUsed;
     }
 
-    public boolean isAlwaysReconnectSet() {
+    public boolean isAlwaysReconnect() {
         return alwaysReconnect;
     }
 
