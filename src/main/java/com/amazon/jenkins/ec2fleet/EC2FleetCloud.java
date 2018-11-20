@@ -433,7 +433,7 @@ public class EC2FleetCloud extends Cloud
 
         // Initialize our retention strategy
         if (getIdleMinutes() != null)
-            slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
+            slave.setRetentionStrategy(new IdleRetentionStrategy(this));
 
         final Jenkins jenkins=Jenkins.getInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter

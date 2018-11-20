@@ -19,8 +19,8 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
 
     private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
-    public IdleRetentionStrategy(final int maxIdleMinutes, final EC2FleetCloud parent) {
-        this.maxIdleMinutes = maxIdleMinutes;
+    public IdleRetentionStrategy(final EC2FleetCloud parent) {
+        this.maxIdleMinutes = parent.getIdleMinutes();
         this.parent = parent;
         LOGGER.log(Level.INFO, "Idle Retention initiated");
     }
