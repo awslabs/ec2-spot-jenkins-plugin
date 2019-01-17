@@ -76,6 +76,7 @@ public class EC2FleetCloud extends Cloud
     private final String fsRoot;
     private final ComputerConnector computerConnector;
     private final boolean privateIpUsed;
+    private final boolean alwaysReconnect;
     private final String labelString;
     private final Integer idleMinutes;
     private final Integer minSize;
@@ -112,6 +113,7 @@ public class EC2FleetCloud extends Cloud
                          final String fsRoot,
                          final ComputerConnector computerConnector,
                          final boolean privateIpUsed,
+                         final boolean alwaysReconnect,
                          final Integer idleMinutes,
                          final Integer minSize,
                          final Integer maxSize,
@@ -126,6 +128,7 @@ public class EC2FleetCloud extends Cloud
         this.labelString = labelString;
         this.idleMinutes = idleMinutes;
         this.privateIpUsed = privateIpUsed;
+        this.alwaysReconnect = alwaysReconnect;
         this.minSize = minSize;
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
@@ -167,12 +170,16 @@ public class EC2FleetCloud extends Cloud
         return privateIpUsed;
     }
 
+    public boolean isAlwaysReconnect() {
+        return alwaysReconnect;
+    }
+
     public String getLabelString(){
         return this.labelString;
     }
 
-    public Integer getIdleMinutes() {
-        return idleMinutes;
+    public int getIdleMinutes() {
+        return (idleMinutes != null) ? idleMinutes : 0;
     }
 
     public Integer getMaxSize() {
@@ -425,8 +432,7 @@ public class EC2FleetCloud extends Cloud
                 FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
-        if (getIdleMinutes() != null)
-            slave.setRetentionStrategy(new IdleRetentionStrategy(getIdleMinutes(), this));
+        slave.setRetentionStrategy(new IdleRetentionStrategy(this));
 
         final Jenkins jenkins=Jenkins.getInstance();
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -529,6 +535,7 @@ public class EC2FleetCloud extends Cloud
         public String fleet;
         public String userName="root";
         public boolean privateIpUsed;
+        public boolean alwaysReconnect;
         public String privateKey;
 
         public DescriptorImpl() {

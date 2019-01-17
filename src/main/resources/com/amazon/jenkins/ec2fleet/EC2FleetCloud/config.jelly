@@ -27,6 +27,11 @@
     <f:entry title="${%Connect Private}" field="privateIpUsed">
       <f:checkbox />
     </f:entry>
+    <f:description>Always reconnect to offline nodes
+    </f:description>
+    <f:entry title="${%Always Reconnect}" field="alwaysReconnect">
+      <f:checkbox />
+    </f:entry>
     <f:description>Labels to add to instances in this fleet
     </f:description>
     <f:entry title="${%Label}" field="labelString">
@@ -43,7 +48,7 @@
       <f:textbox clazz="required positive-number" default="1" />
     </f:entry>
     <f:entry title="${%Max Idle Minutes Before Scaledown}" field="idleMinutes">
-      <f:number clazz="positive-number"/>
+      <f:number clazz="required number" min="0" default="0" />
     </f:entry>
     <f:entry title="${%Minimum Cluster Size}" field="minSize">
       <f:number clazz="required number" min="0" default="1" />
