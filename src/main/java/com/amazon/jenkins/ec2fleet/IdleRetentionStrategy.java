@@ -15,21 +15,27 @@ import java.util.logging.Logger;
 public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
 {
     private final int maxIdleMinutes;
+    private final boolean alwaysReconnect;
     private final EC2FleetCloud parent;
 
     private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
-    public IdleRetentionStrategy(final int maxIdleMinutes, final EC2FleetCloud parent) {
-        this.maxIdleMinutes = maxIdleMinutes;
+    public IdleRetentionStrategy(final EC2FleetCloud parent) {
+        this.maxIdleMinutes = parent.getIdleMinutes();
+        this.alwaysReconnect = parent.isAlwaysReconnect();
         this.parent = parent;
         LOGGER.log(Level.INFO, "Idle Retention initiated");
     }
 
     protected boolean isIdleForTooLong(final Computer c) {
-        long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
-        long maxAge = maxIdleMinutes*60*1000;
-        LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
-        return System.currentTimeMillis()-c.getIdleStartMilliseconds() > (maxIdleMinutes*60*1000);
+        boolean isTooLong = false;
+        if(maxIdleMinutes > 0) {
+            long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
+            long maxAge = maxIdleMinutes*60*1000;
+            LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
+            isTooLong = age > maxAge;
+        }
+        return isTooLong;
     }
 
     @Override public long check(final SlaveComputer c) {
@@ -39,6 +45,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
             // Ensure nobody provisions onto this node until we've done
             // checking
             boolean shouldAcceptTasks = c.isAcceptingTasks();
+            boolean justTerminated = false;
             c.setAcceptingTasks(false);
             try {
                 if (isIdleForTooLong(c)) {
@@ -52,10 +59,13 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
                     if (parent.terminateInstance(nodeId)) {
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
+                        justTerminated = true;
                     }
-                } else {
-                    if (c.isOffline() && !c.isConnecting() && c.isLaunchSupported())
-                        c.tryReconnect();
+                }
+
+                if (alwaysReconnect && !justTerminated && c.isOffline() && !c.isConnecting() && c.isLaunchSupported()) {
+                    LOGGER.log(Level.INFO, "Reconnecting to instance: " + c.getDisplayName());
+                    c.tryReconnect();
                 }
             } finally {
                 c.setAcceptingTasks(shouldAcceptTasks);
@@ -63,5 +73,10 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         }
 
         return 1;
+    }
+
+    @Override public void start(SlaveComputer c) {
+        LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
+        c.connect(false);
     }
 }
