@@ -1,3 +1,8 @@
+
+Please find current repo for this plugin under Jenkins https://github.com/jenkinsci/ec2-fleet-plugin
+
+---
+
 # ec2-spot-jenkins-plugin
 The EC2 Spot Jenkins plugin launches EC2 Spot instances as worker nodes for Jenkins CI server, 
 automatically scaling the capacity with the load. 
