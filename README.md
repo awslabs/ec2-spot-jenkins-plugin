@@ -29,3 +29,4 @@ You can specify the scaling limits in your cloud settings. By default, Jenkins w
 if there are enough tasks waiting in the build queue and scale down idle nodes after a specified idleness period.
 
 You can use the History tab in the AWS console to view the scaling history. 
+
