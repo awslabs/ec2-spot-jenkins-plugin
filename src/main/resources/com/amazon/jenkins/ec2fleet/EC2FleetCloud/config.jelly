@@ -6,7 +6,7 @@
 
 
   <f:section title="${%Spot Fleet Configuration}">
-    <f:entry title="${%AWS Crendentials}" field="credentialsId">
+    <f:entry title="${%AWS Credentials}" field="awsCredentialsId">
       <c:select/>
     </f:entry>
     <f:description>The regions will be populated once the keys above are entered.
@@ -60,7 +60,7 @@
       <f:number clazz="required positive-number" default="1" />
     </f:entry>
 
-    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="credentialsId,region,fleet" />
+    <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="awsCredentialsId,region,fleet" />
   </f:section>
 
 </j:jelly>

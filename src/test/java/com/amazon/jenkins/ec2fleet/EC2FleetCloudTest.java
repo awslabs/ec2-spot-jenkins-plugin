@@ -251,4 +251,44 @@ public class EC2FleetCloudTest {
         Assert.assertEquals(0, r.size());
     }
 
+    @Test
+    public void getAwsCredentialsId_returnNull_whenNoCredentialsIdOrAwsCredentialsId() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                null, null, null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertNull(ec2FleetCloud.getAwsCredentialsId());
+    }
+
+    @Test
+    public void getAwsCredentialsId_returnValue_whenCredentialsIdPresent() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                null, "Opa", null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
+    }
+
+    @Test
+    public void getAwsCredentialsId_returnValue_whenAwsCredentialsIdPresent() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "Opa", null, null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
+    }
+
+    @Test
+    public void getAwsCredentialsId_returnAwsCredentialsId_whenAwsCredentialsIdAndCredentialsIdPresent() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "A", "B", null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertEquals("A", ec2FleetCloud.getAwsCredentialsId());
+    }
+
 }
