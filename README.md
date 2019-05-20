@@ -30,3 +30,6 @@ if there are enough tasks waiting in the build queue and scale down idle nodes a
 
 You can use the History tab in the AWS console to view the scaling history. 
 
+# Release Notes
+
+https://github.com/jenkinsci/ec2-fleet-plugin/releases
