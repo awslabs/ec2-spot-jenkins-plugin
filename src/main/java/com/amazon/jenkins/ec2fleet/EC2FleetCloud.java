@@ -37,6 +37,7 @@ import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -62,10 +63,28 @@ import java.util.logging.SimpleFormatter;
  */
 @SuppressWarnings("unused")
 public class EC2FleetCloud extends Cloud {
+
     public static final String FLEET_CLOUD_ID = "FleetCloud";
     private static final SimpleFormatter sf = new SimpleFormatter();
 
-    private final String credentialsId;
+    /**
+     * Replaced with {@link EC2FleetCloud#awsCredentialsId}
+     * <p>
+     * Plugin is using {@link EC2FleetCloud#computerConnector} for node connection credentials
+     * on UI it's introduced same field <code>credentialsId</code> as we, so it's undefined
+     * which field will be use for operations from UI.
+     * <p>
+     * As result we need to rename this field.
+     * <p>
+     * However we keep old one to be able load stored data for already installed plugins.
+     * https://wiki.jenkins.io/display/JENKINS/Hint+on+retaining+backward+compatibility
+     * <p>
+     * Will be deleted in future when usage for old version <= 1.1.9 will be totally dropped.
+     */
+    private final @Deprecated
+    String credentialsId;
+
+    private final String awsCredentialsId;
     private final String region;
     private final String fleet;
     private final String fsRoot;
@@ -102,7 +121,8 @@ public class EC2FleetCloud extends Cloud {
     }
 
     @DataBoundConstructor
-    public EC2FleetCloud(final String credentialsId,
+    public EC2FleetCloud(final String awsCredentialsId,
+                         final @Deprecated String credentialsId,
                          final String region,
                          final String fleet,
                          final String labelString,
@@ -117,6 +137,7 @@ public class EC2FleetCloud extends Cloud {
         super(FLEET_CLOUD_ID);
         initCaches();
         this.credentialsId = credentialsId;
+        this.awsCredentialsId = awsCredentialsId;
         this.region = region;
         this.fleet = fleet;
         this.fsRoot = fsRoot;
@@ -137,13 +158,19 @@ public class EC2FleetCloud extends Cloud {
 
     private void initCaches() {
         statusCache = new FleetStateStats(fleet, 0, "Initializing", Collections.<String>emptySet(), labelString);
-        plannedNodesCache = new HashSet<NodeProvisioner.PlannedNode>();
-        fleetInstancesCache = new HashSet<String>();
-        dyingFleetInstancesCache = new HashSet<String>();
+        plannedNodesCache = new HashSet<>();
+        fleetInstancesCache = new HashSet<>();
+        dyingFleetInstancesCache = new HashSet<>();
     }
 
-    public String getCredentialsId() {
-        return credentialsId;
+    /**
+     * See {@link EC2FleetCloud#awsCredentialsId} documentation. Don't use fields directly to be able
+     * get old version of plugin and for new.
+     *
+     * @return credentials ID
+     */
+    public String getAwsCredentialsId() {
+        return StringUtils.isNotBlank(awsCredentialsId) ? awsCredentialsId : credentialsId;
     }
 
     public String getRegion() {
@@ -259,13 +286,13 @@ public class EC2FleetCloud extends Cloud {
         if (toProvision < 1)
             return Collections.emptyList();
 
-        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + Integer.toString(weightedExcessWorkload) + ", Provisioning: " + Integer.toString(toProvision));
+        LOGGER.log(Level.INFO, "Provisioning nodes. Excess workload: " + weightedExcessWorkload + ", Provisioning: " + toProvision);
 
         final ModifySpotFleetRequestRequest request = new ModifySpotFleetRequestRequest();
         request.setSpotFleetRequestId(fleet);
         request.setTargetCapacity(targetCapacity);
 
-        final AmazonEC2 ec2 = connect(credentialsId, region);
+        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList =
@@ -298,7 +325,7 @@ public class EC2FleetCloud extends Cloud {
     }
 
     public synchronized FleetStateStats updateStatus() {
-        final AmazonEC2 ec2 = connect(credentialsId, region);
+        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
         final FleetStateStats curStatus = FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
         statusCache = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
@@ -387,7 +414,7 @@ public class EC2FleetCloud extends Cloud {
     }
 
 
-    private boolean isTerminated(final AmazonEC2 ec2, final String instanceId) throws Exception {
+    private boolean isTerminated(final AmazonEC2 ec2, final String instanceId) {
         final DescribeInstancesResult result = ec2.describeInstances(
                 new DescribeInstancesRequest().withInstanceIds(instanceId));
         if (result.getReservations().isEmpty()) //Can't find this instance, assume it is terminated
@@ -458,7 +485,7 @@ public class EC2FleetCloud extends Cloud {
             return false;
         }
 
-        final AmazonEC2 ec2 = connect(credentialsId, region);
+        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
 
         if (!dyingFleetInstancesCache.contains(instanceId)) {
             // We can't remove instances beyond minSize
@@ -507,8 +534,9 @@ public class EC2FleetCloud extends Cloud {
         return result;
     }
 
-    private static AmazonEC2 connect(final String credentialsId, final String region) {
-        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(credentialsId, Jenkins.getInstance());
+    private static AmazonEC2 connect(final String awsCredentialsId, final String region) {
+        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(awsCredentialsId, Jenkins.getInstance());
+        LOGGER.info(String.format("Creating AmazonEC2Client with credentials id %s = %s", awsCredentialsId, credentials));
         final AmazonEC2Client client =
                 credentials != null ?
                         new AmazonEC2Client(credentials) :
@@ -548,16 +576,16 @@ public class EC2FleetCloud extends Cloud {
             return Jenkins.getInstance().getDescriptorList(ComputerConnector.class);
         }
 
-        public ListBoxModel doFillCredentialsIdItems() {
+        public ListBoxModel doFillAwsCredentialsIdItems() {
             return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getInstance());
         }
 
-        public ListBoxModel doFillRegionItems(@QueryParameter final String credentialsId,
+        public ListBoxModel doFillRegionItems(@QueryParameter final String awsCredentialsId,
                                               @QueryParameter final String region) {
             final List<Region> regionList;
 
             try {
-                final AmazonEC2 client = connect(credentialsId, null);
+                final AmazonEC2 client = connect(awsCredentialsId, null);
                 final DescribeRegionsResult regions = client.describeRegions();
                 regionList = regions.getRegions();
             } catch (final Exception ex) {
@@ -574,11 +602,11 @@ public class EC2FleetCloud extends Cloud {
 
         public ListBoxModel doFillFleetItems(@QueryParameter final boolean showNonActiveSpotFleets,
                                              @QueryParameter final String region,
-                                             @QueryParameter final String credentialsId,
+                                             @QueryParameter final String awsCredentialsId,
                                              @QueryParameter final String fleet) {
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client = connect(credentialsId, region);
+                final AmazonEC2 client = connect(awsCredentialsId, region);
                 String token = null;
                 do {
                     final DescribeSpotFleetRequestsRequest req = new DescribeSpotFleetRequestsRequest();
@@ -615,11 +643,11 @@ public class EC2FleetCloud extends Cloud {
         }
 
         public FormValidation doTestConnection(
-                @QueryParameter final String credentialsId,
+                @QueryParameter final String awsCredentialsId,
                 @QueryParameter final String region,
                 @QueryParameter final String fleet) {
             try {
-                final AmazonEC2 client = connect(credentialsId, region);
+                final AmazonEC2 client = connect(awsCredentialsId, region);
                 client.describeSpotFleetInstances(
                         new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
             } catch (final Exception ex) {
