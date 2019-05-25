@@ -105,6 +105,8 @@ public class EC2FleetCloud extends Cloud {
     private transient Set<String> fleetInstancesCache;
     // dyingFleetInstancesCache contains Jenkins nodes known to be in the fleet that are ready to be terminated
     private transient Set<String> dyingFleetInstancesCache;
+    // bootingFleetInstancesCache contains Jenkins nodes known to be in the fleet that are booting
+    private transient Set<String> bootingFleetInstancesCache;
 
     private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
 
@@ -160,6 +162,7 @@ public class EC2FleetCloud extends Cloud {
         plannedNodesCache = new HashSet<>();
         fleetInstancesCache = new HashSet<>();
         dyingFleetInstancesCache = new HashSet<>();
+        bootingFleetInstancesCache = new HashSet<String>();
     }
 
     /**
@@ -260,7 +263,7 @@ public class EC2FleetCloud extends Cloud {
     }
 
     public synchronized Collection<NodeProvisioner.PlannedNode> provisionInternal(
-            final Label label, final int excessWorkload) {
+            final Label label, int excessWorkload) {
 
 
         final FleetStateStats stats = updateStatus();
@@ -274,6 +277,7 @@ public class EC2FleetCloud extends Cloud {
 
         // Calculate the ceiling, without having to work with doubles from Math.ceil
         // https://stackoverflow.com/a/21830188/877024
+        excessWorkload = excessWorkload - (bootingFleetInstancesCache.size() * numExecutors );
         final int weightedExcessWorkload = (excessWorkload + numExecutors - 1) / numExecutors;
         int targetCapacity = stats.getNumDesired() + weightedExcessWorkload;
 
@@ -365,6 +369,7 @@ public class EC2FleetCloud extends Cloud {
         fleetInstancesCache.addAll(currentInstanceIds);
         fleetInstancesCache.removeAll(dyingFleetInstancesCache);
         fleetInstancesCache.retainAll(currentJenkinsNodes);
+        bootingFleetInstancesCache = newFleetInstances;
 
         LOGGER.log(Level.FINE, "# of current Jenkins nodes:" + currentJenkinsNodes.size());
         LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + join(", ", currentInstanceIds) + "]");
