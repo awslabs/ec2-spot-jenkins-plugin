@@ -14,10 +14,6 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
-import hudson.PluginWrapper;
-import hudson.slaves.Cloud;
 import org.apache.commons.lang.StringUtils;
 import org.junit.ClassRule;
 import org.junit.Ignore;
@@ -25,21 +21,15 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.jvnet.hudson.test.BuildWatcher;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.xml.sax.SAXException;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
 
-/**
- * Detailed guides https://jenkins.io/doc/developer/testing/
- * https://wiki.jenkins.io/display/JENKINS/Unit+Test#UnitTest-DealingwithproblemsinJavaScript
- */
-public class IntegrationTest {
+@Ignore("for manual run as you need to provide real AWS EC2 API credentials")
+public class RealEc2ApiIntegrationTest {
 
     @Rule
     public JenkinsRule j = new JenkinsRule();
@@ -47,26 +37,6 @@ public class IntegrationTest {
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
 
-    @Test
-    public void shouldFindThePluginByShortName() {
-        PluginWrapper wrapper = j.getPluginManager().getPlugin("ec2-fleet");
-        assertNotNull("should have a valid plugin", wrapper);
-    }
-
-    @Test
-    public void shouldShowInConfigurationClouds() throws IOException, SAXException {
-        Cloud cloud = new EC2FleetCloud(null, null, null, null, null,
-                null, null, null, false, false,
-                0, 0, 0, 0);
-        j.jenkins.clouds.add(cloud);
-
-        HtmlPage page = j.createWebClient().goTo("configure");
-        System.out.println(page);
-
-        assertEquals("ec2-fleet", ((HtmlTextInput) page.getElementsByName("_.labelString").get(1)).getText());
-    }
-
-    @Ignore
     @Test
     public void shouldSuccessfullyUpdatePluginWithFleetStatus() throws Exception {
         int targetCapacity = 0;
@@ -80,7 +50,7 @@ public class IntegrationTest {
         withFleet(awsCredentials, targetCapacity, new WithFleetBody() {
             @Override
             public void run(AmazonEC2 amazonEC2, String fleetId) throws Exception {
-                EC2FleetCloud cloud = new EC2FleetCloud(null,"credId", null, null, fleetId,
+                EC2FleetCloud cloud = new EC2FleetCloud("","credId", null, null, fleetId,
                         null, null, null, false, false,
                         0, 0, 0, 0);
                 j.jenkins.clouds.add(cloud);
@@ -99,7 +69,6 @@ public class IntegrationTest {
      *
      * @throws Exception e
      */
-    @Ignore
     @Test
     public void shouldSuccessfullyUpdateBigFleetPluginWithFleetStatus() throws Exception {
         final int targetCapacity = 30;
@@ -113,7 +82,7 @@ public class IntegrationTest {
         withFleet(awsCredentials, targetCapacity, new WithFleetBody() {
             @Override
             public void run(AmazonEC2 amazonEC2, String fleetId) throws Exception {
-                EC2FleetCloud cloud = new EC2FleetCloud(null,"credId", null, null, fleetId,
+                EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, null, fleetId,
                         null, null, null, false, false,
                         0, 0, 0, 0);
                 j.jenkins.clouds.add(cloud);
