@@ -122,7 +122,8 @@ public class EC2FleetCloud extends Cloud {
     }
 
     @DataBoundConstructor
-    public EC2FleetCloud(final String awsCredentialsId,
+    public EC2FleetCloud(final String name,
+                         final String awsCredentialsId,
                          final @Deprecated String credentialsId,
                          final String region,
                          final String fleet,
@@ -135,7 +136,7 @@ public class EC2FleetCloud extends Cloud {
                          final Integer minSize,
                          final Integer maxSize,
                          final Integer numExecutors) {
-        super(FLEET_CLOUD_ID);
+        super(name == null || name.equals("") ? FLEET_CLOUD_ID : name);
         initCaches();
         this.credentialsId = credentialsId;
         this.awsCredentialsId = awsCredentialsId;
@@ -439,7 +440,7 @@ public class EC2FleetCloud extends Cloud {
 
         final FleetNode slave = new FleetNode(instanceId, "Fleet slave for " + instanceId,
                 fsRoot, this.numExecutors.toString(), Node.Mode.NORMAL, this.labelString, new ArrayList<NodeProperty<?>>(),
-                FLEET_CLOUD_ID, computerConnector.launch(address, TaskListener.NULL));
+                this.name, computerConnector.launch(address, TaskListener.NULL));
 
         // Initialize our retention strategy
         slave.setRetentionStrategy(new IdleRetentionStrategy(this));
@@ -499,7 +500,7 @@ public class EC2FleetCloud extends Cloud {
             final Computer c = jenkins.getNode(instanceId).toComputer();
             if (c.isOnline()) {
                 c.disconnect(SimpleOfflineCause.create(
-                        Messages._SlaveComputer_DisconnectedBy(this.FLEET_CLOUD_ID, this.fleet)));
+                        Messages._SlaveComputer_DisconnectedBy(this.name, this.fleet)));
             }
         }
         final Computer c = jenkins.getNode(instanceId).toComputer();
