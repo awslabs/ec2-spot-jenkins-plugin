@@ -252,9 +252,29 @@ public class EC2FleetCloudTest {
     }
 
     @Test
+    public void getDisplayName_returnDefaultWhenNull() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                null, null, null, null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.FLEET_CLOUD_ID);
+    }
+
+    @Test
+    public void getDisplayName_returnDisplayName() {
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "CloudName", null, null, null, null,
+                null, null, null, false,
+                false, null, null, null,
+                null);
+        Assert.assertEquals(ec2FleetCloud.getDisplayName(), "CloudName");
+    }
+
+    @Test
     public void getAwsCredentialsId_returnNull_whenNoCredentialsIdOrAwsCredentialsId() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, null, null,
+                null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
                 null);
@@ -264,7 +284,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnValue_whenCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, "Opa", null, null,
+                null, null, "Opa", null, null,
                 null, null, null, false,
                 false, null, null, null,
                 null);
@@ -274,7 +294,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnValue_whenAwsCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "Opa", null, null, null,
+                null, "Opa", null, null, null,
                 null, null, null, false,
                 false, null, null, null,
                 null);
@@ -284,7 +304,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnAwsCredentialsId_whenAwsCredentialsIdAndCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "A", "B", null, null,
+                null, "A", "B", null, null,
                 null, null, null, false,
                 false, null, null, null,
                 null);
