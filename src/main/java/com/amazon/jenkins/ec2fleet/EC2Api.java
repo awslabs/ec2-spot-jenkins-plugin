@@ -1,14 +1,18 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.amazonaws.services.ec2.AmazonEC2;
+import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.AmazonEC2Exception;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
+import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
+import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
 import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
+import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -44,11 +48,11 @@ public class EC2Api {
         return instanceIds;
     }
 
-    public static Set<String> describeTerminated(final AmazonEC2 ec2, final Set<String> instanceIds) {
+    public Set<String> describeTerminated(final AmazonEC2 ec2, final Set<String> instanceIds) {
         return describeTerminated(ec2, instanceIds, BATCH_SIZE);
     }
 
-    public static Set<String> describeTerminated(final AmazonEC2 ec2, final Set<String> instanceIds, final int batchSize) {
+    public Set<String> describeTerminated(final AmazonEC2 ec2, final Set<String> instanceIds, final int batchSize) {
         // assume all terminated until we get opposite info
         final Set<String> terminated = new HashSet<>(instanceIds);
         // don't do actual call if no data
@@ -104,6 +108,17 @@ public class EC2Api {
                 }
             }
         }
+    }
+
+    public AmazonEC2 connect(final String awsCredentialsId, final String region) {
+        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(awsCredentialsId, Jenkins.getInstance());
+        final AmazonEC2Client client =
+                credentials != null ?
+                        new AmazonEC2Client(credentials) :
+                        new AmazonEC2Client();
+        if (region != null)
+            client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
+        return client;
     }
 
 }

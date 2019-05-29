@@ -37,7 +37,7 @@ public class EC2ApiTest {
 
     @Test
     public void shouldReturnEmptyResultAndNoCallIfEmptyListOfInstances() {
-        Set<String> terminated = EC2Api.describeTerminated(amazonEC2, Collections.<String>emptySet());
+        Set<String> terminated = new EC2Api().describeTerminated(amazonEC2, Collections.<String>emptySet());
 
         Assert.assertEquals(Collections.emptySet(), terminated);
         verifyZeroInteractions(amazonEC2);
@@ -64,7 +64,7 @@ public class EC2ApiTest {
         when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class))).thenReturn(describeInstancesResult);
 
         // when
-        Set<String> terminated = EC2Api.describeTerminated(amazonEC2, instanceIds);
+        Set<String> terminated = new EC2Api().describeTerminated(amazonEC2, instanceIds);
 
         // then
         Assert.assertEquals(Collections.emptySet(), terminated);
@@ -104,7 +104,7 @@ public class EC2ApiTest {
                 .thenReturn(describeInstancesResult2);
 
         // when
-        Set<String> terminated = EC2Api.describeTerminated(amazonEC2, instanceIds);
+        Set<String> terminated = new EC2Api().describeTerminated(amazonEC2, instanceIds);
 
         // then
         Assert.assertEquals(new HashSet<>(Arrays.asList("i-3")), terminated);
@@ -144,7 +144,7 @@ public class EC2ApiTest {
                 .thenReturn(describeInstancesResult1);
 
         // when
-        Set<String> terminated = EC2Api.describeTerminated(amazonEC2, instanceIds);
+        Set<String> terminated = new EC2Api().describeTerminated(amazonEC2, instanceIds);
 
         // then
         Assert.assertEquals(new HashSet<>(Arrays.asList(
@@ -179,7 +179,7 @@ public class EC2ApiTest {
                 .thenReturn(describeInstancesResult2);
 
         // when
-        EC2Api.describeTerminated(amazonEC2, instanceIds, 2);
+        new EC2Api().describeTerminated(amazonEC2, instanceIds, 2);
 
         // then
         verify(amazonEC2).describeInstances(new DescribeInstancesRequest().withInstanceIds(Arrays.asList("i1", "i2")));
@@ -229,7 +229,7 @@ public class EC2ApiTest {
                 .thenReturn(describeInstancesResult2);
 
         // when
-        final Set<String> terminatedIds = EC2Api.describeTerminated(amazonEC2, instanceIds);
+        final Set<String> terminatedIds = new EC2Api().describeTerminated(amazonEC2, instanceIds);
 
         // then
         Assert.assertEquals(new HashSet<>(Arrays.asList("i-1", "i-f")), terminatedIds);
@@ -255,7 +255,7 @@ public class EC2ApiTest {
 
         // when
         try {
-            EC2Api.describeTerminated(amazonEC2, instanceIds);
+            new EC2Api().describeTerminated(amazonEC2, instanceIds);
             Assert.fail();
         } catch (AmazonEC2Exception exception) {
             Assert.assertSame(notFoundException, exception);
@@ -274,7 +274,7 @@ public class EC2ApiTest {
 
         // when
         try {
-            EC2Api.describeTerminated(amazonEC2, instanceIds);
+            new EC2Api().describeTerminated(amazonEC2, instanceIds);
             Assert.fail();
         } catch (UnsupportedOperationException e) {
             Assert.assertSame(exception, e);
@@ -295,7 +295,7 @@ public class EC2ApiTest {
         final AmazonEC2 amazonEC2 = new AmazonEC2Client(new BasicAWSCredentials(accessKey, secretKey));
 
         // when
-        Set<String> t = EC2Api.describeTerminated(amazonEC2, instanceIds);
+        Set<String> t = new EC2Api().describeTerminated(amazonEC2, instanceIds);
         Assert.assertEquals(instanceIds, t);
     }
 

@@ -4,21 +4,20 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
+
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * User: cyberax
- * Date: 1/12/16
- * Time: 02:56
+ * @see EC2FleetCloud
  */
-public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
-{
+public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
+
+    private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
+
     private final int maxIdleMinutes;
     private final boolean alwaysReconnect;
     private final EC2FleetCloud parent;
-
-    private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
     public IdleRetentionStrategy(final EC2FleetCloud parent) {
         this.maxIdleMinutes = parent.getIdleMinutes();
@@ -27,21 +26,22 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         LOGGER.log(Level.INFO, "Idle Retention initiated");
     }
 
-    protected boolean isIdleForTooLong(final Computer c) {
+    private boolean isIdleForTooLong(final Computer c) {
         boolean isTooLong = false;
-        if(maxIdleMinutes > 0) {
-            long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
-            long maxAge = maxIdleMinutes*60*1000;
+        if (maxIdleMinutes > 0) {
+            long age = System.currentTimeMillis() - c.getIdleStartMilliseconds();
+            long maxAge = maxIdleMinutes * 60 * 1000;
             LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
             isTooLong = age > maxAge;
         }
         return isTooLong;
     }
 
-    @Override public long check(final SlaveComputer c) {
+    @Override
+    public long check(final SlaveComputer c) {
         // Ensure that the EC2FleetCloud cannot be mutated from under us while
         // we're doing this check
-        synchronized(parent) {
+        synchronized (parent) {
             // Ensure nobody provisions onto this node until we've done
             // checking
             boolean shouldAcceptTasks = c.isAcceptingTasks();
@@ -75,7 +75,8 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
         return 1;
     }
 
-    @Override public void start(SlaveComputer c) {
+    @Override
+    public void start(SlaveComputer c) {
         LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
         c.connect(false);
     }

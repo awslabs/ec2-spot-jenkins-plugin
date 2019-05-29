@@ -1,10 +1,15 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.BatchState;
+import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
+import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
+import hudson.slaves.NodeProvisioner;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
 import org.junit.Assert;
@@ -16,6 +21,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
+import java.util.Collection;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
@@ -23,7 +29,7 @@ import static org.mockito.Mockito.when;
 
 @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({Jenkins.class, AmazonEC2Client.class, EC2FleetCloud.class, EC2FleetCloud.DescriptorImpl.class})
+@PrepareForTest({Jenkins.class, AmazonEC2Client.class, EC2Api.class, EC2FleetCloud.class, EC2FleetCloud.DescriptorImpl.class})
 public class EC2FleetCloudTest {
 
     private SpotFleetRequestConfig spotFleetRequestConfig1;
@@ -50,6 +56,43 @@ public class EC2FleetCloudTest {
         spotFleetRequestConfig6.setSpotFleetRequestState(BatchState.Cancelled_terminating);
         spotFleetRequestConfig7 = new SpotFleetRequestConfig();
         spotFleetRequestConfig7.setSpotFleetRequestState(BatchState.Failed);
+    }
+
+    @Test
+    public void provision_fleetIsEmpty() {
+        // given
+        PowerMockito.mockStatic(Jenkins.class, EC2Api.class);
+
+        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
+        EC2Api ec2Api = mock(EC2Api.class);
+        when(ec2Api.connect(any(String.class), any(String.class))).thenReturn(amazonEC2);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData().withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        Jenkins jenkins = mock(Jenkins.class);
+        PowerMockito.when(Jenkins.getInstance()).thenReturn(jenkins);
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                null, null, null, null, false,
+                false, 0, 0, 1, 1);
+        fleetCloud.setEc2Api(ec2Api);
+
+        // when
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+
+        // then
+        Assert.assertEquals(1, r.size());
     }
 
     @Test

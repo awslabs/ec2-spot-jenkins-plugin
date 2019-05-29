@@ -2,7 +2,6 @@ package com.amazon.jenkins.ec2fleet;
 
 import com.amazon.jenkins.ec2fleet.cloud.FleetNode;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.BatchState;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
@@ -17,7 +16,7 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
-import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
+import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
 import hudson.model.Computer;
@@ -60,11 +59,13 @@ import java.util.logging.SimpleFormatter;
 /**
  * @see CloudNanny
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
 public class EC2FleetCloud extends Cloud {
 
     public static final String FLEET_CLOUD_ID = "FleetCloud";
+
     private static final SimpleFormatter sf = new SimpleFormatter();
+    private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
 
     /**
      * Replaced with {@link EC2FleetCloud#awsCredentialsId}
@@ -96,7 +97,6 @@ public class EC2FleetCloud extends Cloud {
     private final Integer maxSize;
     private final Integer numExecutors;
 
-
     private transient @Nonnull
     FleetStateStats statusCache;
 
@@ -106,18 +106,7 @@ public class EC2FleetCloud extends Cloud {
     // dyingFleetInstancesCache contains Jenkins nodes known to be in the fleet that are ready to be terminated
     private transient Set<String> dyingFleetInstancesCache;
 
-    private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
-
-    public static String join(final String separator, final Iterable<String> elements) {
-        StringBuilder sb = new StringBuilder();
-        boolean isFirst = true;
-        for (String i : elements) {
-            if (!isFirst) sb.append(separator);
-            else isFirst = false;
-            sb.append(i);
-        }
-        return sb.toString();
-    }
+    private transient EC2Api ec2Api = new EC2Api();
 
     @DataBoundConstructor
     public EC2FleetCloud(final String name,
@@ -134,7 +123,7 @@ public class EC2FleetCloud extends Cloud {
                          final Integer minSize,
                          final Integer maxSize,
                          final Integer numExecutors) {
-        super(name == null || name.equals("") ? FLEET_CLOUD_ID : name);
+        super(StringUtils.isBlank(name) ? FLEET_CLOUD_ID : name);
         initCaches();
         this.credentialsId = credentialsId;
         this.awsCredentialsId = awsCredentialsId;
@@ -171,6 +160,11 @@ public class EC2FleetCloud extends Cloud {
      */
     public String getAwsCredentialsId() {
         return StringUtils.isNotBlank(awsCredentialsId) ? awsCredentialsId : credentialsId;
+    }
+
+    @VisibleForTesting
+    void setEc2Api(EC2Api ec2Api) {
+        this.ec2Api = ec2Api;
     }
 
     public String getRegion() {
@@ -249,8 +243,7 @@ public class EC2FleetCloud extends Cloud {
         try {
             return Queue.withLock(new Callable<Collection<NodeProvisioner.PlannedNode>>() {
                 @Override
-                public Collection<NodeProvisioner.PlannedNode> call()
-                        throws Exception {
+                public Collection<NodeProvisioner.PlannedNode> call() {
                     return provisionInternal(label, excessWorkload);
                 }
             });
@@ -261,8 +254,8 @@ public class EC2FleetCloud extends Cloud {
     }
 
     public synchronized Collection<NodeProvisioner.PlannedNode> provisionInternal(
-            final Label label, final int excessWorkload) {
-
+            final Label label, int excessWorkload) {
+        LOGGER.log(Level.INFO, "Start provision label = " + label + ", excessWorkload = " + excessWorkload);
 
         final FleetStateStats stats = updateStatus();
         final int maxAllowed = this.getMaxSize();
@@ -278,8 +271,7 @@ public class EC2FleetCloud extends Cloud {
         final int weightedExcessWorkload = (excessWorkload + numExecutors - 1) / numExecutors;
         int targetCapacity = stats.getNumDesired() + weightedExcessWorkload;
 
-        if (targetCapacity > maxAllowed)
-            targetCapacity = maxAllowed;
+        if (targetCapacity > maxAllowed) targetCapacity = maxAllowed;
 
         int toProvision = targetCapacity - stats.getNumDesired();
 
@@ -292,15 +284,14 @@ public class EC2FleetCloud extends Cloud {
         request.setSpotFleetRequestId(fleet);
         request.setTargetCapacity(targetCapacity);
 
-        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
         ec2.modifySpotFleetRequest(request);
 
-        final List<NodeProvisioner.PlannedNode> resultList =
-                new ArrayList<NodeProvisioner.PlannedNode>();
+        final List<NodeProvisioner.PlannedNode> resultList = new ArrayList<>();
         for (int f = 0; f < toProvision; ++f) {
             final SettableFuture<Node> futureNode = SettableFuture.create();
-            final NodeProvisioner.PlannedNode plannedNode =
-                    new NodeProvisioner.PlannedNode("FleetNode-" + f, futureNode, this.numExecutors);
+            final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode(
+                    "FleetNode-" + f, futureNode, this.numExecutors);
             resultList.add(plannedNode);
             this.plannedNodesCache.add(plannedNode);
         }
@@ -325,8 +316,8 @@ public class EC2FleetCloud extends Cloud {
     }
 
     public synchronized FleetStateStats updateStatus() {
-        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
-        final FleetStateStats curStatus = FleetStateStats.readClusterState(ec2, getFleet(), this.labelString);
+        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
+        final FleetStateStats curStatus = FleetStateStats.readClusterState(ec2, getFleet(), labelString);
         statusCache = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
 
@@ -347,7 +338,7 @@ public class EC2FleetCloud extends Cloud {
         // terminatedFleetInstances contains fleet instances that are terminated, stopped, stopping, or shutting down
         Set<String> terminatedInstanceIds = new HashSet<>();
         try {
-            terminatedInstanceIds = EC2Api.describeTerminated(ec2, currentInstanceIds);
+            terminatedInstanceIds = ec2Api.describeTerminated(ec2, currentInstanceIds);
             LOGGER.log(Level.INFO, "Described terminated instances " + terminatedInstanceIds + " for " + currentInstanceIds);
         } catch (final Exception ex) {
             LOGGER.log(Level.WARNING, "Unable to describe terminated instances for " + currentInstanceIds);
@@ -368,13 +359,13 @@ public class EC2FleetCloud extends Cloud {
         fleetInstancesCache.retainAll(currentJenkinsNodes);
 
         LOGGER.log(Level.FINE, "# of current Jenkins nodes:" + currentJenkinsNodes.size());
-        LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + join(", ", currentInstanceIds) + "]");
-        LOGGER.log(Level.FINE, "Jenkins contains dying instances [" + join(", ", dyingFleetInstancesCache) + "]");
-        LOGGER.log(Level.FINER, "Jenkins contains fleet instances [" + join(", ", fleetInstancesCache) + "]");
-        LOGGER.log(Level.FINER, "Current Jenkins nodes [" + join(", ", currentJenkinsNodes) + "]");
-        LOGGER.log(Level.FINER, "New fleet instances [" + join(", ", newFleetInstances) + "]");
-        LOGGER.log(Level.FINER, "Missing fleet instances [" + join(", ", missingFleetInstances) + "]");
-        LOGGER.log(Level.FINER, "Terminated fleet instances [" + join(", ", terminatedInstanceIds) + "]");
+        LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + StringUtils.join(currentInstanceIds, ", ") + "]");
+        LOGGER.log(Level.FINE, "Jenkins contains dying instances [" + StringUtils.join(dyingFleetInstancesCache, ", ") + "]");
+        LOGGER.log(Level.FINER, "Jenkins contains fleet instances [" + StringUtils.join(fleetInstancesCache, ", ") + "]");
+        LOGGER.log(Level.FINER, "Current Jenkins nodes [" + StringUtils.join(currentJenkinsNodes, ", ") + "]");
+        LOGGER.log(Level.FINER, "New fleet instances [" + StringUtils.join(newFleetInstances, ", ") + "]");
+        LOGGER.log(Level.FINER, "Missing fleet instances [" + StringUtils.join(missingFleetInstances, ", ") + "]");
+        LOGGER.log(Level.FINER, "Terminated fleet instances [" + StringUtils.join(terminatedInstanceIds, ", ") + "]");
 
         // Remove dying fleet instances from Jenkins
         for (final String instance : dyingFleetInstancesCache) {
@@ -402,13 +393,14 @@ public class EC2FleetCloud extends Cloud {
         // If we have new instances - create nodes for them!
         try {
             if (newFleetInstances.size() > 0) {
-                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" + join(", ", newFleetInstances) + "]");
+                LOGGER.log(Level.INFO, "Found new instances from fleet (" + getLabelString() + "): [" +
+                        StringUtils.join(newFleetInstances, ", ") + "]");
             }
             for (final String instanceId : newFleetInstances) {
                 addNewSlave(ec2, instanceId);
             }
         } catch (final Exception ex) {
-            LOGGER.log(Level.WARNING, "Unable to add a new instance. Exception: " + ex.toString());
+            LOGGER.log(Level.WARNING, "Unable to add a new instance.", ex);
         }
 
         return curStatus;
@@ -456,6 +448,7 @@ public class EC2FleetCloud extends Cloud {
             final NodeProvisioner.PlannedNode curNode = plannedNodesCache.iterator().next();
             plannedNodesCache.remove(curNode);
             ((SettableFuture<Node>) curNode.future).set(slave);
+            LOGGER.info("set slave " + slave.getNodeName() + " to planned node");
         }
     }
 
@@ -469,12 +462,12 @@ public class EC2FleetCloud extends Cloud {
             return false;
         }
 
-        final AmazonEC2 ec2 = connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
 
         if (!dyingFleetInstancesCache.contains(instanceId)) {
             // We can't remove instances beyond minSize
             if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState())) {
-                LOGGER.log(Level.INFO, "Not terminating " + instanceId + " because we need a minimum of " + Integer.toString(this.getMinSize()) + " instances running.");
+                LOGGER.log(Level.INFO, "Not terminating " + instanceId + " because we need a minimum of " + this.getMinSize() + " instances running.");
                 return false;
             }
 
@@ -502,7 +495,7 @@ public class EC2FleetCloud extends Cloud {
         try {
             c.waitUntilOffline();
         } catch (InterruptedException e) {
-            LOGGER.log(Level.WARNING, "Interrupted while diconnecting " + c.getDisplayName());
+            LOGGER.log(Level.WARNING, "Interrupted while disconnecting " + c.getDisplayName());
         }
         // terminateInstances is idempotent so it can be called until it's successful
         final TerminateInstancesResult result = ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
@@ -516,18 +509,6 @@ public class EC2FleetCloud extends Cloud {
         boolean result = fleet != null && (label == null || Label.parse(this.labelString).containsAll(label.listAtoms()));
         LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\". Returning " + Boolean.toString(result) + ".");
         return result;
-    }
-
-    private static AmazonEC2 connect(final String awsCredentialsId, final String region) {
-        final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(awsCredentialsId, Jenkins.getInstance());
-        LOGGER.info(String.format("Creating AmazonEC2Client with credentials id %s = %s", awsCredentialsId, credentials));
-        final AmazonEC2Client client =
-                credentials != null ?
-                        new AmazonEC2Client(credentials) :
-                        new AmazonEC2Client();
-        if (region != null)
-            client.setEndpoint("https://ec2." + region + ".amazonaws.com/");
-        return client;
     }
 
 
@@ -545,6 +526,8 @@ public class EC2FleetCloud extends Cloud {
         public boolean alwaysReconnect;
         public String privateKey;
         public boolean showNonActiveSpotFleets;
+
+        private transient EC2Api ec2Api = new EC2Api();
 
         public DescriptorImpl() {
             super();
@@ -569,7 +552,7 @@ public class EC2FleetCloud extends Cloud {
             final List<Region> regionList;
 
             try {
-                final AmazonEC2 client = connect(awsCredentialsId, null);
+                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, null);
                 final DescribeRegionsResult regions = client.describeRegions();
                 regionList = regions.getRegions();
             } catch (final Exception ex) {
@@ -590,7 +573,7 @@ public class EC2FleetCloud extends Cloud {
                                              @QueryParameter final String fleet) {
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client = connect(awsCredentialsId, region);
+                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, region);
                 String token = null;
                 do {
                     final DescribeSpotFleetRequestsRequest req = new DescribeSpotFleetRequestsRequest();
@@ -631,7 +614,7 @@ public class EC2FleetCloud extends Cloud {
                 @QueryParameter final String region,
                 @QueryParameter final String fleet) {
             try {
-                final AmazonEC2 client = connect(awsCredentialsId, region);
+                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, region);
                 client.describeSpotFleetInstances(
                         new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
             } catch (final Exception ex) {
