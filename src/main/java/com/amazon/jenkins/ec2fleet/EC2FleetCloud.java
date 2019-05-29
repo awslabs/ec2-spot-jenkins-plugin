@@ -16,7 +16,6 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
-import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
 import hudson.model.Computer;
@@ -106,8 +105,6 @@ public class EC2FleetCloud extends Cloud {
     // dyingFleetInstancesCache contains Jenkins nodes known to be in the fleet that are ready to be terminated
     private transient Set<String> dyingFleetInstancesCache;
 
-    private transient EC2Api ec2Api = new EC2Api();
-
     @DataBoundConstructor
     public EC2FleetCloud(final String name,
                          final String awsCredentialsId,
@@ -160,11 +157,6 @@ public class EC2FleetCloud extends Cloud {
      */
     public String getAwsCredentialsId() {
         return StringUtils.isNotBlank(awsCredentialsId) ? awsCredentialsId : credentialsId;
-    }
-
-    @VisibleForTesting
-    void setEc2Api(EC2Api ec2Api) {
-        this.ec2Api = ec2Api;
     }
 
     public String getRegion() {
@@ -284,7 +276,7 @@ public class EC2FleetCloud extends Cloud {
         request.setSpotFleetRequestId(fleet);
         request.setTargetCapacity(targetCapacity);
 
-        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList = new ArrayList<>();
@@ -316,7 +308,7 @@ public class EC2FleetCloud extends Cloud {
     }
 
     public synchronized FleetStateStats updateStatus() {
-        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
         final FleetStateStats curStatus = FleetStateStats.readClusterState(ec2, getFleet(), labelString);
         statusCache = curStatus;
         LOGGER.log(Level.FINE, "Fleet Update Status called");
@@ -338,7 +330,7 @@ public class EC2FleetCloud extends Cloud {
         // terminatedFleetInstances contains fleet instances that are terminated, stopped, stopping, or shutting down
         Set<String> terminatedInstanceIds = new HashSet<>();
         try {
-            terminatedInstanceIds = ec2Api.describeTerminated(ec2, currentInstanceIds);
+            terminatedInstanceIds = Registry.getEc2Api().describeTerminated(ec2, currentInstanceIds);
             LOGGER.log(Level.INFO, "Described terminated instances " + terminatedInstanceIds + " for " + currentInstanceIds);
         } catch (final Exception ex) {
             LOGGER.log(Level.WARNING, "Unable to describe terminated instances for " + currentInstanceIds);
@@ -462,7 +454,7 @@ public class EC2FleetCloud extends Cloud {
             return false;
         }
 
-        final AmazonEC2 ec2 = ec2Api.connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
 
         if (!dyingFleetInstancesCache.contains(instanceId)) {
             // We can't remove instances beyond minSize
@@ -527,8 +519,6 @@ public class EC2FleetCloud extends Cloud {
         public String privateKey;
         public boolean showNonActiveSpotFleets;
 
-        private transient EC2Api ec2Api = new EC2Api();
-
         public DescriptorImpl() {
             super();
             load();
@@ -552,7 +542,7 @@ public class EC2FleetCloud extends Cloud {
             final List<Region> regionList;
 
             try {
-                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, null);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, null);
                 final DescribeRegionsResult regions = client.describeRegions();
                 regionList = regions.getRegions();
             } catch (final Exception ex) {
@@ -573,7 +563,7 @@ public class EC2FleetCloud extends Cloud {
                                              @QueryParameter final String fleet) {
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, region);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region);
                 String token = null;
                 do {
                     final DescribeSpotFleetRequestsRequest req = new DescribeSpotFleetRequestsRequest();
@@ -614,7 +604,7 @@ public class EC2FleetCloud extends Cloud {
                 @QueryParameter final String region,
                 @QueryParameter final String fleet) {
             try {
-                final AmazonEC2 client = ec2Api.connect(awsCredentialsId, region);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region);
                 client.describeSpotFleetInstances(
                         new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
             } catch (final Exception ex) {

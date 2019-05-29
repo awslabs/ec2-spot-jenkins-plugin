@@ -12,6 +12,7 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
@@ -58,6 +59,11 @@ public class EC2FleetCloudTest {
         spotFleetRequestConfig7.setSpotFleetRequestState(BatchState.Failed);
     }
 
+    @After
+    public void after() {
+        Registry.setEc2Api(new EC2Api());
+    }
+
     @Test
     public void provision_fleetIsEmpty() {
         // given
@@ -65,6 +71,7 @@ public class EC2FleetCloudTest {
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         EC2Api ec2Api = mock(EC2Api.class);
+        Registry.setEc2Api(ec2Api);
         when(ec2Api.connect(any(String.class), any(String.class))).thenReturn(amazonEC2);
 
         DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
@@ -86,7 +93,6 @@ public class EC2FleetCloudTest {
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, null, null, null, false,
                 false, 0, 0, 1, 1);
-        fleetCloud.setEc2Api(ec2Api);
 
         // when
         Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
