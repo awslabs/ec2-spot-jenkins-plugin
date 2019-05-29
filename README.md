@@ -6,7 +6,7 @@ The EC2 Spot Jenkins plugin launches EC2 Spot instances as worker nodes for Jenk
 automatically scaling the capacity with the load. 
 
 * [Jenkins Page](https://wiki.jenkins.io/display/JENKINS/Amazon+EC2+Fleet+Plugin)
-* [ReportIssue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/new)
+* [Report Issue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/new)
 * [Release Notes](https://github.com/jenkinsci/ec2-fleet-plugin/releases)
 * [Overview](#overview)
 * [Usage](#usage)
