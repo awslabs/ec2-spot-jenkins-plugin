@@ -5,37 +5,89 @@
 The EC2 Spot Jenkins plugin launches EC2 Spot instances as worker nodes for Jenkins CI server, 
 automatically scaling the capacity with the load. 
 
-# SpotFleet
+* [Jenkins Page](https://wiki.jenkins.io/display/JENKINS/Amazon+EC2+Fleet+Plugin)
+* [ReportIssue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/new)
+* [Release Notes](https://github.com/jenkinsci/ec2-fleet-plugin/releases)
+* [Overview](#overview)
+* [Usage](#usage)
+* [Development](#development)
+
+# Overview
 This plugin uses Spot Fleet to launch instances instead of directly launching them by itself. 
 Amazon EC2 attempts to maintain your Spot fleet's target capacity as Spot prices change to maintain
 the fleet within the specified price range. For more information, see 
 [How Spot Fleet Works](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html).
 
 # Usage
-You'll need an AWS account to use this plugin, you can get one at [AWS]( http://aws.amazon.com/ec2/ "AWS"). 
-Once you have an account, create an IAM user with sufficient permissions to launch Spot Fleets ( 
-[Spot Fleet Prerequisites](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites 
-"Spot Fleet Prerequisites") ) and get its AWS credentials.
 
-Those IAM permissions are:
-* `ec2:TerminateInstances`
-* `ec2:ModifySpotFleetRequest`
+## Setup
 
-> These permissions are typically available via the combination of the `AmazonEC2SpotFleetAutoscaleRole` and `AmazonEC2SpotFleetRole` IAM Roles.
+#### 1. Get AWS Account
 
-Then you need to set up a fleet that will serve as the build fleet for Jenkins. You can use the 
-[AWS console]( http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet )
-to launch it or AWS CLI tools. Make sure that you specify an SSH key that will be used later by Jenkins.
+[AWS account](http://aws.amazon.com/ec2/)
 
-Once the fleet is launched, you can set it up by adding a new **EC2 Fleet** cloud in the 
-"Manage Jenkins" > "Configure System" menu of Jenkins.
+#### 2. Create IAM User
 
-# Scaling
+Specify ```programmatic access``` during creation, and record credentials 
+which will be used by Jenkins EC2 Fleet Plugin to connect to your Spot Fleet
+ 
+#### 3. Configure User permissions
+
+Add inline policy to the user to allow it use EC2 Spot Fleet 
+[AWS documentation about that](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites)
+
+```json
+  {
+      "Version": "2012-10-17",
+      "Statement": [
+          {
+              "Effect": "Allow",
+              "Action": [
+                  "ec2:*"
+              ],
+              "Resource": "*"
+          },
+          {
+              "Effect": "Allow",
+              "Action": [
+                "iam:ListRoles",
+                "iam:PassRole",
+                "iam:ListInstanceProfiles"
+              ],
+              "Resource": "*"
+          }
+      ]
+  }
+```
+
+#### 4. Create EC2 Spot Fleet
+
+https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet
+
+Make sure that you specify an SSH key that will be used later by Jenkins.
+
+#### 5. Configure Jenkins
+
+Once the fleet is launched, you can set it up by adding a new **EC2 Fleet** cloud in the Jenkins
+
+1. Goto ```Manage Jenkins > Plugin Manager``` 
+1. Install ```EC2 Fleet Jenkins Plugin```
+1. Goto ```Manage Jenkins > Configure System```
+1. Click ```Add a new cloud``` and select ```Amazon SpotFleet```
+1. Configure credentials and specify EC2 Spot Fleet which you want to use
+
+## Scaling
 You can specify the scaling limits in your cloud settings. By default, Jenkins will try to scale fleet up
 if there are enough tasks waiting in the build queue and scale down idle nodes after a specified idleness period.
 
 You can use the History tab in the AWS console to view the scaling history. 
 
-# Release Notes
+# Development
 
-https://github.com/jenkinsci/ec2-fleet-plugin/releases
+## Releasing
+
+https://jenkins.io/doc/developer/publishing/releasing/
+
+```bash
+mvn release:prepare release:perform
+```
