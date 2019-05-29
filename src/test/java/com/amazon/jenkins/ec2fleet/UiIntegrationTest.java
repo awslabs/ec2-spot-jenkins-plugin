@@ -15,6 +15,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.xml.sax.SAXException;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -49,7 +50,7 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configure");
         System.out.println(page);
 
-        assertEquals("ec2-fleet", ((HtmlTextInput) page.getElementsByName("_.labelString").get(1)).getText());
+        assertEquals("ec2-fleet", ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.labelString").get(1)).getText());
     }
 
     @Test
@@ -67,10 +68,10 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configure");
         System.out.println(page);
 
-        List<DomElement> elementsByName = page.getElementsByName("_.name");
-        assertEquals(3, elementsByName.size());
-        assertEquals("a", ((HtmlTextInput) elementsByName.get(1)).getText());
-        assertEquals("b", ((HtmlTextInput) elementsByName.get(2)).getText());
+        List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
+        assertEquals(2, elementsByName.size());
+        assertEquals("a", ((HtmlTextInput) elementsByName.get(0)).getText());
+        assertEquals("b", ((HtmlTextInput) elementsByName.get(1)).getText());
     }
 
     @Test
@@ -88,10 +89,10 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configure");
         System.out.println(page);
 
-        List<DomElement> elementsByName = page.getElementsByName("_.name");
-        assertEquals(3, elementsByName.size());
+        List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
+        assertEquals(2, elementsByName.size());
+        assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(0)).getText());
         assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(1)).getText());
-        assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(2)).getText());
     }
 
     @Test
@@ -109,7 +110,7 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configure");
         HtmlForm form = page.getFormByName("config");
 
-        ((HtmlTextInput) page.getElementsByName("_.name").get(1)).setText("a");
+        ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
 
         HtmlFormUtil.submit(form);
 
@@ -146,6 +147,17 @@ public class UiIntegrationTest {
 
         assertSame(cloud1, j.jenkins.getCloud("a"));
         assertSame(cloud2, j.jenkins.getCloud("b"));
+    }
+
+    private static List<DomElement> getElementsByNameWithoutJdk(HtmlPage page, String name) {
+        String jdkCheckUrl = "/jenkins/descriptorByName/hudson.model.JDK/checkName";
+        List<DomElement> r = new ArrayList<>();
+        for (DomElement domElement : page.getElementsByName(name)) {
+            if (!jdkCheckUrl.equals(domElement.getAttribute("checkurl"))) {
+                r.add(domElement);
+            }
+        }
+        return r;
     }
 
 }
