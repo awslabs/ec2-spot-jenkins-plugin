@@ -2,13 +2,22 @@ package com.amazon.jenkins.ec2fleet;
 
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
+import com.amazonaws.services.ec2.model.ActiveInstance;
 import com.amazonaws.services.ec2.model.BatchState;
+import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
+import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
+import com.amazonaws.services.ec2.model.Instance;
+import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
+import hudson.ExtensionList;
+import hudson.model.LabelFinder;
+import hudson.model.labels.LabelAtom;
+import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.ListBoxModel;
 import jenkins.model.Jenkins;
@@ -17,20 +26,24 @@ import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.Mockito;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 @SuppressWarnings("ArraysAsListWithZeroOrOneArgument")
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({Jenkins.class, AmazonEC2Client.class, EC2Api.class, EC2FleetCloud.class, EC2FleetCloud.DescriptorImpl.class})
+@PrepareForTest({Jenkins.class, AmazonEC2Client.class, EC2Api.class, EC2FleetCloud.class,
+        EC2FleetCloud.DescriptorImpl.class, LabelFinder.class})
 public class EC2FleetCloudTest {
 
     private SpotFleetRequestConfig spotFleetRequestConfig1;
@@ -92,13 +105,112 @@ public class EC2FleetCloudTest {
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, null, null, null, false,
-                false, 0, 0, 1, 1);
+                false, 0, 0, 1, 1, false);
 
         // when
         Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
 
         // then
         Assert.assertEquals(1, r.size());
+    }
+
+    @Test
+    public void updateStatus_doNothingWhenFleetIsEmpty() {
+        // given
+        PowerMockito.mockStatic(Jenkins.class, EC2Api.class);
+
+        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
+        EC2Api ec2Api = mock(EC2Api.class);
+        Registry.setEc2Api(ec2Api);
+        when(ec2Api.connect(any(String.class), any(String.class))).thenReturn(amazonEC2);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData().withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        Jenkins jenkins = mock(Jenkins.class);
+        PowerMockito.when(Jenkins.getInstance()).thenReturn(jenkins);
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "fleetId", null, null, null, false,
+                false, 0, 0, 1, 1, false);
+
+        // when
+        FleetStateStats stats = fleetCloud.updateStatus();
+
+        // then
+        Assert.assertEquals(0, stats.getNumDesired());
+        Assert.assertEquals(0, stats.getNumActive());
+        Assert.assertEquals("fleetId", stats.getFleetId());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeIfAnyNewDescribed() {
+        // given
+        PowerMockito.mockStatic(Jenkins.class, EC2Api.class, LabelFinder.class);
+
+        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
+        EC2Api ec2Api = mock(EC2Api.class);
+        Registry.setEc2Api(ec2Api);
+        when(ec2Api.connect(any(String.class), any(String.class))).thenReturn(amazonEC2);
+
+        DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
+        describeInstancesResult.withReservations(
+                new Reservation().withInstances(new Instance()
+                        .withPublicIpAddress("p-ip")
+                        .withInstanceId("i-0")));
+
+        when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class)))
+                .thenReturn(describeInstancesResult);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId("i-0")
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData().withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        Jenkins jenkins = mock(Jenkins.class);
+        PowerMockito.when(Jenkins.getInstance()).thenReturn(jenkins);
+
+        // mock
+        ExtensionList labelFinder = mock(ExtensionList.class);
+        when(labelFinder.iterator()).thenReturn(Collections.emptyIterator());
+        PowerMockito.when(LabelFinder.all()).thenReturn(labelFinder);
+
+        // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
+        Mockito.when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false);
+
+        // when
+        FleetStateStats stats = fleetCloud.updateStatus();
+
+        // then
+        Assert.assertEquals(0, stats.getNumDesired());
+        Assert.assertEquals(1, stats.getNumActive());
+        Assert.assertEquals("fleetId", stats.getFleetId());
     }
 
     @Test
@@ -306,7 +418,7 @@ public class EC2FleetCloudTest {
                 null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.FLEET_CLOUD_ID);
     }
 
@@ -316,7 +428,7 @@ public class EC2FleetCloudTest {
                 "CloudName", null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertEquals(ec2FleetCloud.getDisplayName(), "CloudName");
     }
 
@@ -326,7 +438,7 @@ public class EC2FleetCloudTest {
                 null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertNull(ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -336,7 +448,7 @@ public class EC2FleetCloudTest {
                 null, null, "Opa", null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -346,7 +458,7 @@ public class EC2FleetCloudTest {
                 null, "Opa", null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -356,7 +468,7 @@ public class EC2FleetCloudTest {
                 null, "A", "B", null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null);
+                null, false);
         Assert.assertEquals("A", ec2FleetCloud.getAwsCredentialsId());
     }
 
