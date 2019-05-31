@@ -10,8 +10,6 @@ import jenkins.model.Jenkins;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * @see EC2FleetCloud
@@ -19,8 +17,6 @@ import java.util.logging.Logger;
 @Extension
 @SuppressWarnings("unused")
 public class CloudNanny extends PeriodicWork {
-
-    private static final Logger LOGGER = Logger.getLogger(CloudNanny.class.getName());
 
     @Override
     public long getRecurrencePeriod() {
@@ -39,7 +35,6 @@ public class CloudNanny extends PeriodicWork {
 
             // Update the cluster states
             final EC2FleetCloud fleetCloud = (EC2FleetCloud) cloud;
-            LOGGER.log(Level.FINE, "Checking cloud: " + fleetCloud.getLabelString());
             stats.add(Queue.withLock(new Callable<FleetStateStats>() {
                 @Override
                 public FleetStateStats call() {
