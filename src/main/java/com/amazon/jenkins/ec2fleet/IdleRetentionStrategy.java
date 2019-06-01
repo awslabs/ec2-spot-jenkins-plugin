@@ -27,7 +27,6 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
         this.maxIdleMinutes = cloud.getIdleMinutes();
         this.alwaysReconnect = cloud.isAlwaysReconnect();
         this.cloud = cloud;
-        LOGGER.log(Level.INFO, "Idle Retention initiated");
     }
 
     @Override
@@ -41,7 +40,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
             boolean justTerminated = false;
             c.setAcceptingTasks(false);
             try {
-                if (isIdleForTooLong(c)) {
+                if (c.isIdle() && isIdleForTooLong(c)) {
                     // Find instance ID
                     Node compNode = c.getNode();
                     if (compNode == null) {
