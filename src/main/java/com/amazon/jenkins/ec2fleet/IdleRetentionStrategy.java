@@ -5,6 +5,7 @@ import hudson.model.Node;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
 
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -13,35 +14,27 @@ import java.util.logging.Logger;
  */
 public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
 
+    private static final int RE_CHECK_IN_MINUTE = 1;
+
     private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
     private final int maxIdleMinutes;
     private final boolean alwaysReconnect;
-    private final EC2FleetCloud parent;
+    private final EC2FleetCloud cloud;
 
-    public IdleRetentionStrategy(final EC2FleetCloud parent) {
-        this.maxIdleMinutes = parent.getIdleMinutes();
-        this.alwaysReconnect = parent.isAlwaysReconnect();
-        this.parent = parent;
+    @SuppressWarnings("WeakerAccess")
+    public IdleRetentionStrategy(final EC2FleetCloud cloud) {
+        this.maxIdleMinutes = cloud.getIdleMinutes();
+        this.alwaysReconnect = cloud.isAlwaysReconnect();
+        this.cloud = cloud;
         LOGGER.log(Level.INFO, "Idle Retention initiated");
-    }
-
-    private boolean isIdleForTooLong(final Computer c) {
-        boolean isTooLong = false;
-        if (maxIdleMinutes > 0) {
-            long age = System.currentTimeMillis() - c.getIdleStartMilliseconds();
-            long maxAge = maxIdleMinutes * 60 * 1000;
-            LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
-            isTooLong = age > maxAge;
-        }
-        return isTooLong;
     }
 
     @Override
     public long check(final SlaveComputer c) {
         // Ensure that the EC2FleetCloud cannot be mutated from under us while
         // we're doing this check
-        synchronized (parent) {
+        synchronized (cloud) {
             // Ensure nobody provisions onto this node until we've done
             // checking
             boolean shouldAcceptTasks = c.isAcceptingTasks();
@@ -56,7 +49,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
                     }
 
                     final String nodeId = compNode.getNodeName();
-                    if (parent.terminateInstance(nodeId)) {
+                    if (cloud.terminateInstance(nodeId)) {
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
                         justTerminated = true;
@@ -72,7 +65,7 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
             }
         }
 
-        return 1;
+        return RE_CHECK_IN_MINUTE;
     }
 
     @Override
@@ -80,4 +73,13 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
         LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
         c.connect(false);
     }
+
+    private boolean isIdleForTooLong(final Computer c) {
+        if (maxIdleMinutes <= 0) return false;
+        final long idleTime = System.currentTimeMillis() - c.getIdleStartMilliseconds();
+        final long maxIdle = TimeUnit.MINUTES.toMillis(maxIdleMinutes);
+        LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + idleTime + " Max Age:" + maxIdle);
+        return idleTime > maxIdle;
+    }
+
 }
