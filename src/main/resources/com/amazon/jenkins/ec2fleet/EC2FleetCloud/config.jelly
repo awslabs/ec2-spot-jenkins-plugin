@@ -43,6 +43,12 @@
       <f:checkbox />
     </f:entry>
 
+    <f:description>Only build jobs with label expressions matching this node
+    </f:description>
+    <f:entry title="${%Restrict usage}" field="restrictUsage">
+      <f:checkbox />
+    </f:entry>
+
     <f:description>Labels to add to instances in this fleet</f:description>
     <f:entry title="${%Label}" field="labelString">
       <f:textbox clazz="required" default="ec2-fleet" />
