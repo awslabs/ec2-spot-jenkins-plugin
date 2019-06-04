@@ -7,8 +7,8 @@ automatically scaling the capacity with the load.
 
 * [Jenkins Page](https://wiki.jenkins.io/display/JENKINS/Amazon+EC2+Fleet+Plugin)
 * [Report Issue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/new)
-* [Release Notes](https://github.com/jenkinsci/ec2-fleet-plugin/releases)
 * [Overview](#overview)
+* [Change Log](#change-log)
 * [Usage](#usage)
 * [Development](#development)
 
@@ -17,6 +17,17 @@ This plugin uses Spot Fleet to launch instances instead of directly launching th
 Amazon EC2 attempts to maintain your Spot fleet's target capacity as Spot prices change to maintain
 the fleet within the specified price range. For more information, see 
 [How Spot Fleet Works](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html).
+
+# Change Log
+
+This plugin is using [SemVersion](https://semver.org/) which means that each plugin version looks like 
+```
+<major number = increase only if non back compatible changes>.<increase when new features>.<increase when bug fixes>
+```
+
+As result you safe to update plugin to any version until first number is the same with what you have.
+
+https://github.com/jenkinsci/ec2-fleet-plugin/releases
 
 # Usage
 
