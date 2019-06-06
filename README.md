@@ -189,6 +189,8 @@ jenkins.save()
 
 # Development
 
+Plugin usage statistic per Jenkins version [here](https://stats.jenkins.io/pluginversions/ec2-fleet.html)
+
 ## Releasing
 
 https://jenkins.io/doc/developer/publishing/releasing/
