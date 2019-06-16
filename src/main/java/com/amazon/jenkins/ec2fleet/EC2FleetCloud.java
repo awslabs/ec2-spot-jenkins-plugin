@@ -41,7 +41,6 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.springframework.util.ObjectUtils;
 
-import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -51,7 +50,6 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
-import java.util.logging.LogRecord;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
@@ -206,23 +204,6 @@ public class EC2FleetCloud extends Cloud {
         return restrictUsage;
     }
 
-    public static void log(final Logger logger, final Level level,
-                           final TaskListener listener, final String message) {
-        log(logger, level, listener, message, null);
-    }
-
-    public static void log(final Logger logger, final Level level,
-                           final TaskListener listener, String message, final Throwable exception) {
-        logger.log(level, message, exception);
-        if (listener != null) {
-            if (exception != null)
-                message += " Exception: " + exception;
-            final LogRecord lr = new LogRecord(level, message);
-            final PrintStream printStream = listener.getLogger();
-            printStream.print(sf.format(lr));
-        }
-    }
-
     @Override
     public Collection<NodeProvisioner.PlannedNode> provision(
             final Label label, final int excessWorkload) {
@@ -234,7 +215,7 @@ public class EC2FleetCloud extends Cloud {
                 }
             });
         } catch (Exception exception) {
-            LOGGER.log(Level.WARNING, "provisionInternal failed", exception);
+            warning(exception, "provisionInternal failed");
             throw new IllegalStateException(exception);
         }
     }
@@ -308,9 +289,9 @@ public class EC2FleetCloud extends Cloud {
         Set<String> terminatedInstanceIds = new HashSet<>();
         try {
             terminatedInstanceIds = Registry.getEc2Api().describeTerminated(ec2, currentInstanceIds);
-            LOGGER.info("Described terminated instances " + terminatedInstanceIds + " for " + currentInstanceIds);
+            info("Described terminated instances " + terminatedInstanceIds + " for " + currentInstanceIds);
         } catch (final Exception ex) {
-            LOGGER.warning("Unable to describe terminated instances for " + currentInstanceIds);
+            warning(ex, "Unable to describe terminated instances for %s", currentInstanceIds);
         }
 
         // newFleetInstances contains running fleet instances that are not already Jenkins nodes
@@ -326,9 +307,9 @@ public class EC2FleetCloud extends Cloud {
         fleetInstancesCache.removeAll(dyingFleetInstancesCache);
         fleetInstancesCache.retainAll(currentJenkinsNodes);
 
-        LOGGER.log(Level.FINE, "# of current Jenkins nodes:" + currentJenkinsNodes.size());
-        LOGGER.log(Level.FINE, "Fleet (" + getLabelString() + ") contains instances [" + StringUtils.join(currentInstanceIds, ", ") + "]");
-        LOGGER.log(Level.FINE, "Jenkins contains dying instances [" + StringUtils.join(dyingFleetInstancesCache, ", ") + "]");
+        fine("# of current Jenkins nodes:" + currentJenkinsNodes.size());
+        fine("Fleet (" + getLabelString() + ") contains instances [" + StringUtils.join(currentInstanceIds, ", ") + "]");
+        fine("Jenkins contains dying instances [" + StringUtils.join(dyingFleetInstancesCache, ", ") + "]");
         LOGGER.log(Level.FINER, "Jenkins contains fleet instances [" + StringUtils.join(fleetInstancesCache, ", ") + "]");
         LOGGER.log(Level.FINER, "Current Jenkins nodes [" + StringUtils.join(currentJenkinsNodes, ", ") + "]");
         LOGGER.log(Level.FINER, "New fleet instances [" + StringUtils.join(newFleetInstances, ", ") + "]");
@@ -337,7 +318,7 @@ public class EC2FleetCloud extends Cloud {
 
         // Remove dying fleet instances from Jenkins
         for (final String instance : dyingFleetInstancesCache) {
-            LOGGER.log(Level.INFO, "Fleet (" + getLabelString() + ") no longer has the instance " + instance + ", removing from Jenkins.");
+            info("Fleet (" + getLabelString() + ") no longer has the instance " + instance + ", removing from Jenkins.");
             removeNode(instance);
             dyingFleetInstancesCache.remove(instance);
         }
@@ -348,12 +329,12 @@ public class EC2FleetCloud extends Cloud {
             if (node == null)
                 continue;
 
-            if (!this.labelString.equals(node.getLabelString())) {
+            if (!labelString.equals(node.getLabelString())) {
                 try {
-                    LOGGER.log(Level.INFO, "Updating label on node " + instance + " to \"" + this.labelString + "\".");
-                    node.setLabelString(this.labelString);
+                    info("Updating label on node %s to \"%s\".", instance, labelString);
+                    node.setLabelString(labelString);
                 } catch (final Exception ex) {
-                    LOGGER.log(Level.WARNING, "Unable to set label on node " + instance);
+                    warning(ex, "Unable to set label on node %s", instance);
                 }
             }
         }
@@ -361,26 +342,26 @@ public class EC2FleetCloud extends Cloud {
         // If we have new instances - create nodes for them!
         try {
             if (newFleetInstances.size() > 0) {
-                LOGGER.info("Found new instances from fleet (" + getLabelString() + "): [" +
+                info("Found new instances from fleet (" + getLabelString() + "): [" +
                         StringUtils.join(newFleetInstances, ", ") + "]");
             }
             for (final String instanceId : newFleetInstances) {
                 addNewSlave(ec2, instanceId);
             }
         } catch (final Exception ex) {
-            LOGGER.log(Level.WARNING, "Unable to add a new instance.", ex);
+            warning(ex, "Unable to set label on node");
         }
 
         return stats;
     }
 
     public synchronized boolean terminateInstance(final String instanceId) {
-        LOGGER.log(Level.INFO, "Attempting to terminate instance: " + instanceId);
+        info("Attempting to terminate instance: %s", instanceId);
 
         final FleetStateStats stats = updateStatus();
 
         if (!fleetInstancesCache.contains(instanceId)) {
-            LOGGER.log(Level.INFO, "Unknown instance terminated: " + instanceId);
+            info("Unknown instance terminated: %s", instanceId);
             return false;
         }
 
@@ -388,8 +369,8 @@ public class EC2FleetCloud extends Cloud {
 
         if (!dyingFleetInstancesCache.contains(instanceId)) {
             // We can't remove instances beyond minSize
-            if (stats.getNumDesired() == this.getMinSize() || !"active".equals(stats.getState())) {
-                LOGGER.log(Level.INFO, "Not terminating " + instanceId + " because we need a minimum of " + this.getMinSize() + " instances running.");
+            if (stats.getNumDesired() == minSize || !"active".equals(stats.getState())) {
+                info("Not terminating %s because we need a minimum of %s instances running.", instanceId, minSize);
                 return false;
             }
 
@@ -417,11 +398,11 @@ public class EC2FleetCloud extends Cloud {
         try {
             c.waitUntilOffline();
         } catch (InterruptedException e) {
-            LOGGER.log(Level.WARNING, "Interrupted while disconnecting " + c.getDisplayName());
+            warning("Interrupted while disconnecting %s", c.getDisplayName());
         }
         // terminateInstances is idempotent so it can be called until it's successful
         final TerminateInstancesResult result = ec2.terminateInstances(new TerminateInstancesRequest(Collections.singletonList(instanceId)));
-        LOGGER.log(Level.INFO, "Instance " + instanceId + " termination result: " + result.toString());
+        info("Instance %s termination result: %s", instanceId, result.toString());
 
         return true;
     }
@@ -429,17 +410,13 @@ public class EC2FleetCloud extends Cloud {
     @Override
     public boolean canProvision(final Label label) {
         boolean result = fleet != null && (label == null || Label.parse(this.labelString).containsAll(label.listAtoms()));
-        LOGGER.log(Level.FINE, "CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\". Returning " + Boolean.toString(result) + ".");
+        fine("CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\". Returning " + result + ".");
         return result;
     }
 
     private Object readResolve() {
         initCaches();
         return this;
-    }
-
-    private void info(String msg, Object... args) {
-        LOGGER.info("fleet = " + getDisplayName() + " label = " + getLabelString() + " " + String.format(msg, args));
     }
 
     private void initCaches() {
@@ -458,8 +435,7 @@ public class EC2FleetCloud extends Cloud {
                 try {
                     jenkins.removeNode(n);
                 } catch (final Exception ex) {
-                    LOGGER.log(Level.WARNING, "Error removing node " + instanceId);
-                    throw new IllegalStateException(ex);
+                    throw new IllegalStateException(String.format("Error removing node %s", instanceId), ex);
                 }
             }
         }
@@ -511,8 +487,24 @@ public class EC2FleetCloud extends Cloud {
             final NodeProvisioner.PlannedNode curNode = plannedNodesCache.iterator().next();
             plannedNodesCache.remove(curNode);
             ((SettableFuture<Node>) curNode.future).set(slave);
-            LOGGER.info("set slave " + slave.getNodeName() + " to planned node");
+            info("set slave %s to planned node", slave.getNodeName());
         }
+    }
+
+    private void info(final String msg, final Object... args) {
+        LOGGER.info("fleet = " + getDisplayName() + " label = " + getLabelString() + " " + String.format(msg, args));
+    }
+
+    private void fine(final String msg, final Object... args) {
+        LOGGER.fine("fleet = " + getDisplayName() + " label = " + getLabelString() + " " + String.format(msg, args));
+    }
+
+    private void warning(final String msg, final Object... args) {
+        LOGGER.warning("fleet = " + getDisplayName() + " label = " + getLabelString() + " " + String.format(msg, args));
+    }
+
+    private void warning(final Throwable t, final String msg, final Object... args) {
+        LOGGER.log(Level.WARNING, "fleet = " + getDisplayName() + " label = " + getLabelString() + " " + String.format(msg, args), t);
     }
 
     @Extension
