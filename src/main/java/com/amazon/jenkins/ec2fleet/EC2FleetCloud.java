@@ -1,6 +1,7 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.amazon.jenkins.ec2fleet.cloud.FleetNode;
+import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.BatchState;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -47,6 +48,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.concurrent.Callable;
 import java.util.logging.Level;
@@ -78,11 +80,12 @@ public class EC2FleetCloud extends Cloud {
      * <p>
      * Will be deleted in future when usage for old version <= 1.1.9 will be totally dropped.
      */
-    private final @Deprecated
-    String credentialsId;
+    @Deprecated
+    private final String credentialsId;
 
     private final String awsCredentialsId;
     private final String region;
+    private final String endpoint;
     private final String fleet;
     private final String fsRoot;
     private final ComputerConnector computerConnector;
@@ -107,6 +110,7 @@ public class EC2FleetCloud extends Cloud {
                          final String awsCredentialsId,
                          final @Deprecated String credentialsId,
                          final String region,
+                         final String endpoint,
                          final String fleet,
                          final String labelString,
                          final String fsRoot,
@@ -124,6 +128,7 @@ public class EC2FleetCloud extends Cloud {
         this.credentialsId = credentialsId;
         this.awsCredentialsId = awsCredentialsId;
         this.region = region;
+        this.endpoint = endpoint;
         this.fleet = fleet;
         this.fsRoot = fsRoot;
         this.computerConnector = computerConnector;
@@ -150,6 +155,10 @@ public class EC2FleetCloud extends Cloud {
 
     public String getRegion() {
         return region;
+    }
+
+    public String getEndpoint() {
+        return endpoint;
     }
 
     public String getFleet() {
@@ -250,7 +259,7 @@ public class EC2FleetCloud extends Cloud {
         request.setSpotFleetRequestId(fleet);
         request.setTargetCapacity(targetCapacity);
 
-        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region, endpoint);
         ec2.modifySpotFleetRequest(request);
 
         final List<NodeProvisioner.PlannedNode> resultList = new ArrayList<>();
@@ -268,7 +277,7 @@ public class EC2FleetCloud extends Cloud {
     public synchronized FleetStateStats updateStatus() {
         info("start");
 
-        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region, endpoint);
         final FleetStateStats stats = FleetStateStats.readClusterState(ec2, getFleet(), labelString);
         info("described instances: %s", stats.getInstances());
 
@@ -365,7 +374,7 @@ public class EC2FleetCloud extends Cloud {
             return false;
         }
 
-        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region);
+        final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region, endpoint);
 
         if (!dyingFleetInstancesCache.contains(instanceId)) {
             // We can't remove instances beyond minSize
@@ -541,33 +550,40 @@ public class EC2FleetCloud extends Cloud {
             return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getInstance());
         }
 
-        public ListBoxModel doFillRegionItems(@QueryParameter final String awsCredentialsId,
-                                              @QueryParameter final String region) {
-            final List<Region> regionList;
+        public ListBoxModel doFillRegionItems(@QueryParameter final String awsCredentialsId) {
+            // to keep user consistent order tree set
+            final Set<String> regionNames = new TreeSet<>();
 
             try {
-                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, null);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, null, null);
                 final DescribeRegionsResult regions = client.describeRegions();
-                regionList = regions.getRegions();
+                for (final Region region : regions.getRegions()) {
+                    regionNames.add(region.getRegionName());
+                }
             } catch (final Exception ex) {
-                //Ignore bad exceptions
-                return new ListBoxModel();
+                // ignore exception it could be case that credentials are not belong to default region
+                // which we are using to describe regions
+            }
+
+            for (final com.amazonaws.regions.Region region : RegionUtils.getRegions()) {
+                regionNames.add(region.getName());
             }
 
             final ListBoxModel model = new ListBoxModel();
-            for (final Region reg : regionList) {
-                model.add(new ListBoxModel.Option(reg.getRegionName(), reg.getRegionName()));
+            for (final String regionName : regionNames) {
+                model.add(new ListBoxModel.Option(regionName, regionName));
             }
             return model;
         }
 
         public ListBoxModel doFillFleetItems(@QueryParameter final boolean showNonActiveSpotFleets,
                                              @QueryParameter final String region,
+                                             @QueryParameter final String endpoint,
                                              @QueryParameter final String awsCredentialsId,
                                              @QueryParameter final String fleet) {
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region, endpoint);
                 String token = null;
                 do {
                     final DescribeSpotFleetRequestsRequest req = new DescribeSpotFleetRequestsRequest();
@@ -585,7 +601,7 @@ public class EC2FleetCloud extends Cloud {
                 } while (token != null);
 
             } catch (final Exception ex) {
-                //Ignore bad exceptions
+                LOGGER.log(Level.WARNING, String.format("Cannot describe fleets in %s or by endpoint %s", region, endpoint), ex);
                 return model;
             }
 
@@ -606,9 +622,10 @@ public class EC2FleetCloud extends Cloud {
         public FormValidation doTestConnection(
                 @QueryParameter final String awsCredentialsId,
                 @QueryParameter final String region,
+                @QueryParameter final String endpoint,
                 @QueryParameter final String fleet) {
             try {
-                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region);
+                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region, endpoint);
                 client.describeSpotFleetInstances(
                         new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
             } catch (final Exception ex) {
