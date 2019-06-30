@@ -119,8 +119,7 @@ public class EC2FleetCloudTest {
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", null, null, null, null, false,
-                false, 0, 0, 1, 1, false,
-                false, false, 0, 0);
+                false, 0, 0, 1, 1, false, false, false);
 
         // when
         Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
@@ -150,8 +149,7 @@ public class EC2FleetCloudTest {
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, null, false,
-                false, 0, 0, 1, 1,
-                false, false, false, 0, 0);
+                false, 0, 0, 1, 1, false, false, false);
 
         // when
         FleetStateStats stats = fleetCloud.updateStatus();
@@ -208,8 +206,7 @@ public class EC2FleetCloudTest {
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
-                false, 0, 0, 1, 1,
-                false, false, false, 0, 0);
+                false, 0, 0, 1, 1, false, false, false);
 
         ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
         doNothing().when(jenkins).addNode(nodeCaptor.capture());
@@ -273,8 +270,7 @@ public class EC2FleetCloudTest {
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
-                false, 0, 0, 1, 1, false,
-                true, false, 0, 0);
+                false, 0, 0, 1, 1, false, true, false);
 
         ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
         doNothing().when(jenkins).addNode(nodeCaptor.capture());
@@ -488,8 +484,7 @@ public class EC2FleetCloudTest {
                 null, null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.FLEET_CLOUD_ID);
     }
 
@@ -499,8 +494,7 @@ public class EC2FleetCloudTest {
                 "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         assertEquals(ec2FleetCloud.getDisplayName(), "CloudName");
     }
 
@@ -510,8 +504,7 @@ public class EC2FleetCloudTest {
                 null, null, null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         Assert.assertNull(ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -521,8 +514,7 @@ public class EC2FleetCloudTest {
                 null, null, "Opa", null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -532,8 +524,7 @@ public class EC2FleetCloudTest {
                 null, "Opa", null, null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -543,8 +534,7 @@ public class EC2FleetCloudTest {
                 null, "A", "B", null, null, null,
                 null, null, null, false,
                 false, null, null, null,
-                null, false, false, false
-                , 0, 0);
+                null, false, false, false);
         assertEquals("A", ec2FleetCloud.getAwsCredentialsId());
     }
 

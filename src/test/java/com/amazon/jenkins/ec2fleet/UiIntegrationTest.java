@@ -44,8 +44,7 @@ public class UiIntegrationTest {
     public void shouldShowInConfigurationClouds() throws IOException, SAXException {
         Cloud cloud = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud);
 
         HtmlPage page = j.createWebClient().goTo("configure");
@@ -58,14 +57,12 @@ public class UiIntegrationTest {
     public void shouldShowMultipleClouds() throws IOException, SAXException {
         Cloud cloud1 = new EC2FleetCloud("a", null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud1);
 
         Cloud cloud2 = new EC2FleetCloud("b", null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud2);
 
         HtmlPage page = j.createWebClient().goTo("configure");
@@ -81,14 +78,12 @@ public class UiIntegrationTest {
     public void shouldShowMultipleCloudsWithDefaultName() throws IOException, SAXException {
         Cloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud1);
 
         Cloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud2);
 
         HtmlPage page = j.createWebClient().goTo("configure");
@@ -104,14 +99,12 @@ public class UiIntegrationTest {
     public void shouldUpdateProperCloudWhenMultiple() throws IOException, SAXException {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud2);
 
         HtmlPage page = j.createWebClient().goTo("configure");
@@ -129,14 +122,12 @@ public class UiIntegrationTest {
     public void shouldGetFirstWhenMultipleCloudWithSameName() {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud2);
 
         assertSame(cloud1, j.jenkins.getCloud("FleetCloud"));
@@ -146,14 +137,12 @@ public class UiIntegrationTest {
     public void shouldGetProperWhenMultipleWithDiffName() {
         EC2FleetCloud cloud1 = new EC2FleetCloud("a", null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud("b", null, null, null, null,
                 null, null, null, null, false, false,
-                0, 0, 0, 0, false, false,
-                false, 0, 0);
+                0, 0, 0, 0, false, false, false);
         j.jenkins.clouds.add(cloud2);
 
         assertSame(cloud1, j.jenkins.getCloud("a"));
