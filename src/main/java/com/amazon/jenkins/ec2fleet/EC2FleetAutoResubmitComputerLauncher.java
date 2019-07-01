@@ -108,7 +108,9 @@ public class EC2FleetAutoResubmitComputerLauncher extends DelegatingComputerLaun
                     + " termination, resubmit finished");
         } else {
             LOGGER.log(LOG_LEVEL, "Unexpected " + computer.getDisplayName()
-                    + " termination but resubmit disabled, no actions");
+                    + " termination but resubmit disabled, no actions, disableTaskResubmit: "
+                    + disableTaskResubmit + ", offline: " + computer.isOffline()
+                    + ", offlineCause: " + (computer.getOfflineCause() != null ? computer.getOfflineCause().getClass() : "null"));
         }
 
         // call parent
