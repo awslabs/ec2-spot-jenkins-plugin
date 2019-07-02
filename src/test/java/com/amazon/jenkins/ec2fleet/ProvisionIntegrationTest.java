@@ -158,11 +158,10 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         getQueueTaskFutures(1);
 
-        triggerSuggestReviewNow("momo");
-
         tryUntil(new Runnable() {
             @Override
             public void run() {
+                j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
                 verify(cloud, atLeast(2)).provisionInternal(any(Label.class), anyInt());
             }
         });
