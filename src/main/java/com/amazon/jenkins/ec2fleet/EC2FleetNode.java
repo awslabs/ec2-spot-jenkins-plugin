@@ -1,4 +1,4 @@
-package com.amazon.jenkins.ec2fleet.cloud;
+package com.amazon.jenkins.ec2fleet;
 
 import hudson.Extension;
 import hudson.model.Computer;
@@ -13,7 +13,7 @@ import hudson.slaves.RetentionStrategy;
 import java.io.IOException;
 import java.util.List;
 
-public class FleetNode extends Slave implements EphemeralNode {
+public class EC2FleetNode extends Slave implements EphemeralNode {
 
     private final String cloudName;
 
@@ -36,7 +36,7 @@ public class FleetNode extends Slave implements EphemeralNode {
 
     @Override
     public Computer createComputer() {
-        return new FleetNodeComputer(this);
+        return new EC2FleetNodeComputer(this);
     }
 
     @Extension
