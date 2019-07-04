@@ -101,6 +101,7 @@ public class EC2FleetCloud extends Cloud {
     private final Integer numExecutors;
     private final boolean addNodeOnlyIfRunning;
     private final boolean restrictUsage;
+    private final boolean scaleExecutorsByWeight;
     private final Integer initOnlineTimeoutSec;
     private final Integer initOnlineCheckIntervalSec;
 
@@ -135,7 +136,8 @@ public class EC2FleetCloud extends Cloud {
                          final boolean restrictUsage,
                          final boolean disableTaskResubmit,
                          final Integer initOnlineTimeoutSec,
-                         final Integer initOnlineCheckIntervalSec) {
+                         final Integer initOnlineCheckIntervalSec,
+                         final boolean scaleExecutorsByWeight) {
         super(StringUtils.isBlank(name) ? FLEET_CLOUD_ID : name);
         initCaches();
         this.credentialsId = credentialsId;
@@ -154,6 +156,7 @@ public class EC2FleetCloud extends Cloud {
         this.numExecutors = numExecutors;
         this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
+        this.scaleExecutorsByWeight = scaleExecutorsByWeight;
         this.disableTaskResubmit = disableTaskResubmit;
         this.initOnlineTimeoutSec = initOnlineTimeoutSec;
         this.initOnlineCheckIntervalSec = initOnlineCheckIntervalSec;
@@ -231,6 +234,10 @@ public class EC2FleetCloud extends Cloud {
 
     public Integer getNumExecutors() {
         return numExecutors;
+    }
+
+    public boolean isScaleExecutorsByWeight() {
+        return scaleExecutorsByWeight;
     }
 
     public String getJvmSettings() {
@@ -382,7 +389,7 @@ public class EC2FleetCloud extends Cloud {
                         StringUtils.join(newFleetInstances, ", ") + "]");
             }
             for (final String instanceId : newFleetInstances) {
-                addNewSlave(ec2, instanceId);
+                addNewSlave(ec2, instanceId, stats);
             }
         } catch (final Exception ex) {
             warning(ex, "Unable to set label on node");
@@ -483,7 +490,7 @@ public class EC2FleetCloud extends Cloud {
      * @param ec2        ec2 client
      * @param instanceId instance id
      */
-    private void addNewSlave(final AmazonEC2 ec2, final String instanceId) throws Exception {
+    private void addNewSlave(final AmazonEC2 ec2, final String instanceId, FleetStateStats stats) throws Exception {
         final DescribeInstancesResult result = ec2.describeInstances(
                 new DescribeInstancesRequest().withInstanceIds(instanceId));
         //Can't find this instance, skip it
@@ -500,16 +507,26 @@ public class EC2FleetCloud extends Cloud {
         if (address == null) return; // Wait some more...
 
         // Generate a random FS root if one isn't specified
-        String effectiveFsRoot = fsRoot;
-        if (StringUtils.isBlank(effectiveFsRoot)) {
+        final String effectiveFsRoot;
+        if (StringUtils.isBlank(fsRoot)) {
             effectiveFsRoot = "/tmp/jenkins-" + UUID.randomUUID().toString().substring(0, 8);
+        } else {
+            effectiveFsRoot = fsRoot;
+        }
+
+        final Double instanceTypeWeight = stats.getInstanceTypeWeights().get(instance.getInstanceType());
+        final int effectiveNumExecutors;
+        if (scaleExecutorsByWeight && instanceTypeWeight != null) {
+            effectiveNumExecutors = (int) Math.max(Math.round(numExecutors * instanceTypeWeight), 1);
+        } else {
+            effectiveNumExecutors = numExecutors;
         }
 
         final EC2FleetAutoResubmitComputerLauncher computerLauncher = new EC2FleetAutoResubmitComputerLauncher(
                 computerConnector.launch(address, TaskListener.NULL), disableTaskResubmit);
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet slave for " + instanceId,
-                effectiveFsRoot, numExecutors.toString(), nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
+                effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
                 name, computerLauncher);
 
         // Initialize our retention strategy
