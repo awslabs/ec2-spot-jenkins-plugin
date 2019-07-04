@@ -507,25 +507,26 @@ public class EC2FleetCloud extends Cloud {
         if (address == null) return; // Wait some more...
 
         // Generate a random FS root if one isn't specified
-        String effectiveFsRoot = fsRoot;
-        if (StringUtils.isBlank(effectiveFsRoot)) {
+        final String effectiveFsRoot;
+        if (StringUtils.isBlank(fsRoot)) {
             effectiveFsRoot = "/tmp/jenkins-" + UUID.randomUUID().toString().substring(0, 8);
+        } else {
+            effectiveFsRoot = fsRoot;
         }
 
-        int numExecutors;
-        if (scaleExecutorsByWeight) {
-            Double instanceTypeWeight = stats.getInstanceTypeWeight(instance.getInstanceType());
-            Double instanceWeight = Math.ceil(this.numExecutors * instanceTypeWeight);
-            numExecutors = instanceWeight.intValue();
+        final Double instanceTypeWeight = stats.getInstanceTypeWeights().get(instance.getInstanceType());
+        final int effectiveNumExecutors;
+        if (scaleExecutorsByWeight && instanceTypeWeight != null) {
+            effectiveNumExecutors = (int) Math.max(Math.round(numExecutors * instanceTypeWeight), 1);
         } else {
-            numExecutors = this.numExecutors;
+            effectiveNumExecutors = numExecutors;
         }
 
         final EC2FleetAutoResubmitComputerLauncher computerLauncher = new EC2FleetAutoResubmitComputerLauncher(
                 computerConnector.launch(address, TaskListener.NULL), disableTaskResubmit);
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet slave for " + instanceId,
-                effectiveFsRoot, numExecutors.toString(), nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
+                effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
                 name, computerLauncher);
 
         // Initialize our retention strategy

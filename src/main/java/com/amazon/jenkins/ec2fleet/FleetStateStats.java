@@ -12,6 +12,7 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import javax.annotation.concurrent.ThreadSafe;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -21,37 +22,33 @@ import java.util.Set;
 /**
  * @see EC2FleetCloud
  */
-@SuppressWarnings("unused")
+@SuppressWarnings({"unused", "WeakerAccess"})
+@ThreadSafe
 public final class FleetStateStats {
-    private static
-    final double DEFAULT_WEIGHT = 1.0;
-    private @Nonnull
-    final String fleetId;
-    private @Nonnegative
-    final int numActive;
-    private @Nonnegative
-    final int numDesired;
-    private @Nonnull
-    final String state;
-    private @Nonnull
-    final Set<String> instances;
-    private @Nonnull
-    final Map<String, Double> instanceTypeWeights;
-    private @Nonnull
-    final String label;
+
+    @Nonnull
+    private final String fleetId;
+    @Nonnegative
+    private final int numActive;
+    @Nonnegative
+    private final int numDesired;
+    @Nonnull
+    private final String state;
+    @Nonnull
+    private final Set<String> instances;
+    @Nonnull
+    private final Map<String, Double> instanceTypeWeights;
 
     public FleetStateStats(final @Nonnull String fleetId,
                            final int numDesired, final @Nonnull String state,
                            final @Nonnull Set<String> instances,
-                           final @Nonnull Map<String, Double> instanceTypeWeights,
-                           final @Nonnull String label) {
+                           final @Nonnull Map<String, Double> instanceTypeWeights) {
         this.fleetId = fleetId;
         this.numActive = instances.size();
         this.numDesired = numDesired;
         this.state = state;
         this.instances = instances;
-        this.instanceTypeWeights=instanceTypeWeights;
-        this.label = label;
+        this.instanceTypeWeights = instanceTypeWeights;
     }
 
     @Nonnull
@@ -78,14 +75,8 @@ public final class FleetStateStats {
     }
 
     @Nonnull
-    public Double getInstanceTypeWeight(String instanceType)  {
-      Double instanceTypeWeight = instanceTypeWeights.get(instanceType);
-      return instanceTypeWeight == null ? DEFAULT_WEIGHT : instanceTypeWeight;
-    }
-
-    @Nonnull
-    public String getLabel() {
-        return label;
+    public Map<String, Double> getInstanceTypeWeights() {
+        return instanceTypeWeights;
     }
 
     public static FleetStateStats readClusterState(final AmazonEC2 ec2, final String fleetId, final String label) {
@@ -113,21 +104,22 @@ public final class FleetStateStats {
         final SpotFleetRequestConfigData fleetRequestConfig = fleetConfig.getSpotFleetRequestConfig();
 
         // Index configured instance types by weight:
-        final Map<String, Double> instanceTypeWeight = new HashMap<>();
+        final Map<String, Double> instanceTypeWeights = new HashMap<>();
         for (SpotFleetLaunchSpecification launchSpecification : fleetRequestConfig.getLaunchSpecifications()) {
             final String instanceType = launchSpecification.getInstanceType();
+            if (instanceType == null) continue;
+
             final Double instanceWeight = launchSpecification.getWeightedCapacity();
-            final Double existingWeight = instanceTypeWeight.get(instanceType);
-            if (instanceWeight == null  || (existingWeight != null && existingWeight > instanceWeight)) {
+            final Double existingWeight = instanceTypeWeights.get(instanceType);
+            if (instanceWeight == null || (existingWeight != null && existingWeight > instanceWeight)) {
                 continue;
             }
-            instanceTypeWeight.put(instanceType, instanceWeight);
+            instanceTypeWeights.put(instanceType, instanceWeight);
         }
 
         return new FleetStateStats(fleetId,
                 fleetRequestConfig.getTargetCapacity(),
                 fleetConfig.getSpotFleetRequestState(), instances,
-                Collections.unmodifiableMap(instanceTypeWeight),
-                label);
+                instanceTypeWeights);
     }
 }

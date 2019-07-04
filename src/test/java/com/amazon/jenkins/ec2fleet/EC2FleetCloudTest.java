@@ -15,6 +15,7 @@ import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.Reservation;
+import com.amazonaws.services.ec2.model.SpotFleetLaunchSpecification;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import hudson.ExtensionList;
@@ -70,6 +71,9 @@ public class EC2FleetCloudTest {
     @Mock
     private EC2Api ec2Api;
 
+    @Mock
+    private AmazonEC2 amazonEC2;
+
     @Before
     public void before() {
         spotFleetRequestConfig1 = new SpotFleetRequestConfig();
@@ -89,6 +93,8 @@ public class EC2FleetCloudTest {
 
         Registry.setEc2Api(ec2Api);
 
+        PowerMockito.mockStatic(LabelFinder.class);
+
         PowerMockito.mockStatic(Jenkins.class);
         PowerMockito.when(Jenkins.getInstance()).thenReturn(jenkins);
     }
@@ -101,7 +107,6 @@ public class EC2FleetCloudTest {
     @Test
     public void provision_fleetIsEmpty() {
         // given
-        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
 
         DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
@@ -120,7 +125,7 @@ public class EC2FleetCloudTest {
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", null, null, null, null, false,
                 false, 0, 0, 1, 1, false,
-                false, false, 0, 0);
+                false, false, 0, 0, false);
 
         // when
         Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
@@ -132,7 +137,6 @@ public class EC2FleetCloudTest {
     @Test
     public void updateStatus_doNothingWhenFleetIsEmpty() {
         // given
-        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
 
         DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
@@ -151,7 +155,8 @@ public class EC2FleetCloudTest {
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, null, false,
                 false, 0, 0, 1, 1,
-                false, false, false, 0, 0);
+                false, false, false, 0,
+                0, false);
 
         // when
         FleetStateStats stats = fleetCloud.updateStatus();
@@ -165,9 +170,6 @@ public class EC2FleetCloudTest {
     @Test
     public void updateStatus_shouldAddNodeIfAnyNewDescribed() throws IOException {
         // given
-        PowerMockito.mockStatic(LabelFinder.class);
-
-        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
 
         DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
@@ -196,20 +198,13 @@ public class EC2FleetCloudTest {
         when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
                 .thenReturn(describeSpotFleetRequestsResult);
 
-        when(jenkins.getNodesObject()).thenReturn(mock(Nodes.class));
-
-        // mock
-        ExtensionList labelFinder = mock(ExtensionList.class);
-        when(labelFinder.iterator()).thenReturn(Collections.emptyIterator());
-        PowerMockito.when(LabelFinder.all()).thenReturn(labelFinder);
-
-        // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
-        when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
+        mockNodeCreatingPart();
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 1,
-                false, false, false, 0, 0);
+                false, false, false,
+                0, 0, false);
 
         ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
         doNothing().when(jenkins).addNode(nodeCaptor.capture());
@@ -230,9 +225,6 @@ public class EC2FleetCloudTest {
     @Test
     public void updateStatus_shouldAddNodeIfAnyNewDescribed_restrictUsage() throws IOException {
         // given
-        PowerMockito.mockStatic(LabelFinder.class);
-
-        AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
 
         DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
@@ -261,20 +253,13 @@ public class EC2FleetCloudTest {
         when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
                 .thenReturn(describeSpotFleetRequestsResult);
 
-        when(jenkins.getNodesObject()).thenReturn(mock(Nodes.class));
-
-        // mock
-        ExtensionList labelFinder = mock(ExtensionList.class);
-        when(labelFinder.iterator()).thenReturn(Collections.emptyIterator());
-        PowerMockito.when(LabelFinder.all()).thenReturn(labelFinder);
-
-        // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
-        when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
+        mockNodeCreatingPart();
 
         EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 1, false,
-                true, false, 0, 0);
+                true, false,
+                0, 0, false);
 
         ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
         doNothing().when(jenkins).addNode(nodeCaptor.capture());
@@ -290,6 +275,308 @@ public class EC2FleetCloudTest {
         // and
         Node actualFleetNode = nodeCaptor.getValue();
         assertEquals(Node.Mode.EXCLUSIVE, actualFleetNode.getMode());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithNumExecutors_whenWeightProvidedButNotEnabled() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
+        final String instanceType = "t";
+        describeInstancesResult.withReservations(
+                new Reservation().withInstances(new Instance()
+                        .withPublicIpAddress("p-ip")
+                        .withInstanceType(instanceType)
+                        .withInstanceId("i-0")));
+
+        when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class)))
+                .thenReturn(describeInstancesResult);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId("i-0")
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData()
+                                        .withLaunchSpecifications(
+                                                new SpotFleetLaunchSpecification()
+                                                        .withInstanceType(instanceType)
+                                                        .withWeightedCapacity(1.1))
+                                        .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, false);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(1, actualFleetNode.getNumExecutors());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithScaledNumExecutors_whenWeightPresentAndEnabled() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        final String instanceType = "t";
+        final String instanceId = "i-0";
+        mockDescribeInstances(instanceId, instanceType);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId(instanceId)
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData()
+                                        .withLaunchSpecifications(
+                                                new SpotFleetLaunchSpecification()
+                                                        .withInstanceType(instanceType)
+                                                        .withWeightedCapacity(2.0))
+                                        .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, true);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(2, actualFleetNode.getNumExecutors());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithNumExecutors_whenWeightPresentAndEnabledButForDiffType() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        mockDescribeInstances("i-0", "t");
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId("i-0")
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(
+                                new SpotFleetRequestConfigData()
+                                        .withLaunchSpecifications(
+                                                new SpotFleetLaunchSpecification()
+                                                        .withInstanceType("non-t")
+                                                        .withWeightedCapacity(2.0))
+                                        .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, true);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(1, actualFleetNode.getNumExecutors());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithRoundToLowScaledNumExecutors_whenWeightPresentAndEnabled() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        final String instanceId = "i-0";
+        final String instanceType = "t";
+        mockDescribeInstances(instanceId, instanceType);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId(instanceId)
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(new SpotFleetRequestConfigData()
+                                .withLaunchSpecifications(
+                                        new SpotFleetLaunchSpecification()
+                                                .withInstanceType(instanceType)
+                                                .withWeightedCapacity(1.44))
+                                .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, true);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(1, actualFleetNode.getNumExecutors());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithRoundToLowScaledNumExecutors_whenWeightPresentAndEnabled1() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        final String instanceId = "i-0";
+        final String instanceType = "t";
+        mockDescribeInstances(instanceId, instanceType);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId(instanceId)
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(new SpotFleetRequestConfigData()
+                                .withLaunchSpecifications(
+                                        new SpotFleetLaunchSpecification()
+                                                .withInstanceType("t")
+                                                .withWeightedCapacity(1.5))
+                                .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, true);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(2, actualFleetNode.getNumExecutors());
+    }
+
+    @Test
+    public void updateStatus_shouldAddNodeWithScaledToOneNumExecutors_whenWeightPresentButLessOneAndEnabled() throws IOException {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+
+        final String instanceId = "i-0";
+        final String instanceType = "t";
+        mockDescribeInstances(instanceId, instanceType);
+
+        DescribeSpotFleetInstancesResult describeSpotFleetInstancesResult = new DescribeSpotFleetInstancesResult();
+        describeSpotFleetInstancesResult.setActiveInstances(Arrays.asList(
+                new ActiveInstance().withInstanceId(instanceId)
+        ));
+
+        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
+                .thenReturn(describeSpotFleetInstancesResult);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
+        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
+                new SpotFleetRequestConfig()
+                        .withSpotFleetRequestState("active")
+                        .withSpotFleetRequestConfig(new SpotFleetRequestConfigData()
+                                .withLaunchSpecifications(
+                                        new SpotFleetLaunchSpecification()
+                                                .withInstanceType("t")
+                                                .withWeightedCapacity(0.1))
+                                .withTargetCapacity(0))));
+        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
+                "", "fleetId", null, null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 1, 1, false,
+                true, false,
+                0, 0, true);
+
+        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        doNothing().when(jenkins).addNode(nodeCaptor.capture());
+
+        // when
+        fleetCloud.updateStatus();
+
+        // then
+        Node actualFleetNode = nodeCaptor.getValue();
+        assertEquals(1, actualFleetNode.getNumExecutors());
     }
 
     @Test
@@ -489,7 +776,7 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.FLEET_CLOUD_ID);
     }
 
@@ -500,7 +787,7 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         assertEquals(ec2FleetCloud.getDisplayName(), "CloudName");
     }
 
@@ -511,7 +798,7 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         Assert.assertNull(ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -522,7 +809,7 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -533,7 +820,7 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         assertEquals("Opa", ec2FleetCloud.getAwsCredentialsId());
     }
 
@@ -544,8 +831,31 @@ public class EC2FleetCloudTest {
                 null, null, null, false,
                 false, null, null, null,
                 null, false, false, false
-                , 0, 0);
+                , 0, 0, false);
         assertEquals("A", ec2FleetCloud.getAwsCredentialsId());
+    }
+
+    private void mockNodeCreatingPart() {
+        when(jenkins.getNodesObject()).thenReturn(mock(Nodes.class));
+
+        ExtensionList labelFinder = mock(ExtensionList.class);
+        when(labelFinder.iterator()).thenReturn(Collections.emptyIterator());
+        PowerMockito.when(LabelFinder.all()).thenReturn(labelFinder);
+
+        // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
+        when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
+    }
+
+    private void mockDescribeInstances(String instanceId, String instanceType) {
+        DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
+        describeInstancesResult.withReservations(
+                new Reservation().withInstances(new Instance()
+                        .withPublicIpAddress("p-ip")
+                        .withInstanceType(instanceType)
+                        .withInstanceId(instanceId)));
+
+        when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class)))
+                .thenReturn(describeInstancesResult);
     }
 
 }

@@ -20,7 +20,6 @@ import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.ComputerLauncher;
-import jenkins.model.Jenkins;
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
@@ -50,7 +49,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 0, 1, false, false,
-                false, 0, 0);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         EC2Api ec2Api = mock(EC2Api.class);
@@ -93,7 +92,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeFleetNotInstanceWhenModified();
@@ -125,7 +124,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 300, 15));
+                false, 300, 15, false));
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
@@ -151,7 +150,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0));
+                false, 0, 0, false));
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
@@ -176,7 +175,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0));
+                false, 0, 0, false));
         j.jenkins.clouds.add(cloud);
 
         EC2Api ec2Api = mock(EC2Api.class);
@@ -228,7 +227,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, true, false,
-                false, 0, 0);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Pending);
