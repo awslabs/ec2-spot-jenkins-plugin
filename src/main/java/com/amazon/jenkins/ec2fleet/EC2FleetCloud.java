@@ -529,7 +529,13 @@ public class EC2FleetCloud extends Cloud {
 
         final String address = privateIpUsed ? instance.getPrivateIpAddress() : instance.getPublicIpAddress();
         // Check if we have the address to use. Nodes don't get it immediately.
-        if (address == null) return; // Wait some more...
+        if (address == null) {
+            if (!privateIpUsed) {
+                info("%s instance %s public IP address not assigned, it could take some time or" +
+                        " Spot Request is not configured to assign public IPs", instance.getInstanceId());
+            }
+            return; // wait more time, probably IP address not yet assigned
+        }
 
         // Generate a random FS root if one isn't specified
         final String effectiveFsRoot;
