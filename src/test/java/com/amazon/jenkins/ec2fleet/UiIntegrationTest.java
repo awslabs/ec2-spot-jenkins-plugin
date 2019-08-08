@@ -10,7 +10,6 @@ import hudson.model.Node;
 import hudson.slaves.Cloud;
 import hudson.slaves.NodeProperty;
 import org.apache.commons.lang.StringUtils;
-import org.hamcrest.Matchers;
 import org.junit.ClassRule;
 import org.junit.Rule;
 import org.junit.Test;
@@ -26,7 +25,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -58,6 +56,23 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configure");
 
         assertTrue(StringUtils.isNotBlank(((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.oldId").get(0)).getText()));
+    }
+
+    @Test
+    public void shouldShowNodeConfigurationPage() throws Exception {
+        EC2FleetCloud cloud = new EC2FleetCloud(null, null, null, null, null, null, null,
+                null, null, null, false, false,
+                0, 0, 0, 0, false, false,
+                false, 0, 0, false);
+        j.jenkins.clouds.add(cloud);
+
+        j.jenkins.addNode(new EC2FleetNode("node-name", "", "", 1,
+                Node.Mode.EXCLUSIVE, "", new ArrayList<NodeProperty<?>>(), cloud,
+                j.createComputerLauncher(null)));
+
+        HtmlPage page = j.createWebClient().goTo("computer/node-name/configure");
+
+        assertTrue(StringUtils.isNotBlank(((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).getText()));
     }
 
     @Test
