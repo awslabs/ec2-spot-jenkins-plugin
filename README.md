@@ -26,7 +26,11 @@ the fleet within the specified price range. For more information, see
 
 This plugin is using [SemVersion](https://semver.org/) which means that each plugin version looks like 
 ```
-<major number = increase only if non back compatible changes>.<increase when new features>.<increase when bug fixes>
+<major>.<minor>.<bugfix>
+
+major = increase only if non back compatible changes
+minor = increase when new features
+bugfix = increase when bug fixes
 ```
 
 As result you safe to update plugin to any version until first number is the same with what you have.
@@ -79,7 +83,9 @@ Add inline policy to the user to allow it use EC2 Spot Fleet
 
 https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet
 
-Make sure that you specify an SSH key that will be used later by Jenkins.
+Make sure that you:
+- Checked ```Maintain target capacity``` [why](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type)
+- specify an SSH key that will be used later by Jenkins.
 
 #### 5. Configure Jenkins
 
