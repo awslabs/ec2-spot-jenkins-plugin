@@ -7,6 +7,7 @@ import com.amazonaws.services.ec2.model.DescribeRegionsResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
+import com.amazonaws.services.ec2.model.FleetType;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
@@ -620,7 +621,7 @@ public class EC2FleetCloud extends Cloud {
         public boolean alwaysReconnect;
         public boolean restrictUsage;
         public String privateKey;
-        public boolean showNonActiveSpotFleets;
+        public boolean showAllFleets;
 
         public DescriptorImpl() {
             super();
@@ -666,7 +667,7 @@ public class EC2FleetCloud extends Cloud {
             return model;
         }
 
-        public ListBoxModel doFillFleetItems(@QueryParameter final boolean showNonActiveSpotFleets,
+        public ListBoxModel doFillFleetItems(@QueryParameter final boolean showAllFleets,
                                              @QueryParameter final String region,
                                              @QueryParameter final String endpoint,
                                              @QueryParameter final String awsCredentialsId,
@@ -682,8 +683,10 @@ public class EC2FleetCloud extends Cloud {
                     for (final SpotFleetRequestConfig config : result.getSpotFleetRequestConfigs()) {
                         final String curFleetId = config.getSpotFleetRequestId();
                         final boolean selected = ObjectUtils.nullSafeEquals(fleet, curFleetId);
-                        if (selected || showNonActiveSpotFleets || isSpotFleetActive(config)) {
-                            final String displayStr = curFleetId + " (" + config.getSpotFleetRequestState() + ")";
+                        if (selected || showAllFleets || isSpotFleetActiveAndMaintain(config)) {
+                            final String displayStr = curFleetId +
+                                    " (" + config.getSpotFleetRequestState() + ")" +
+                                    " (" + config.getSpotFleetRequestConfig().getType() + ")";
                             model.add(new ListBoxModel.Option(displayStr, curFleetId, selected));
                         }
                     }
@@ -703,10 +706,11 @@ public class EC2FleetCloud extends Cloud {
          * @return return <code>true</code> not only for {@link BatchState#Active} but for any other
          * in which fleet in theory could accept load.
          */
-        private boolean isSpotFleetActive(final SpotFleetRequestConfig config) {
-            return BatchState.Active.toString().equals(config.getSpotFleetRequestState())
-                    || BatchState.Modifying.toString().equals(config.getSpotFleetRequestState())
-                    || BatchState.Submitted.toString().equals(config.getSpotFleetRequestState());
+        private boolean isSpotFleetActiveAndMaintain(final SpotFleetRequestConfig config) {
+            return FleetType.Maintain.toString().equals(config.getSpotFleetRequestConfig().getType()) && (
+                    BatchState.Active.toString().equals(config.getSpotFleetRequestState())
+                            || BatchState.Modifying.toString().equals(config.getSpotFleetRequestState())
+                            || BatchState.Submitted.toString().equals(config.getSpotFleetRequestState()));
         }
 
         public FormValidation doTestConnection(
@@ -731,8 +735,8 @@ public class EC2FleetCloud extends Cloud {
             return super.configure(req, formData);
         }
 
-        public boolean isShowNonActiveSpotFleets() {
-            return showNonActiveSpotFleets;
+        public boolean isShowAllFleets() {
+            return showAllFleets;
         }
 
         public String getAccessId() {

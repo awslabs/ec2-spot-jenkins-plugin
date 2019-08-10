@@ -4,15 +4,14 @@ import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
 import com.amazonaws.services.ec2.model.BatchState;
-import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeInstancesResult;
 import com.amazonaws.services.ec2.model.DescribeRegionsResult;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
 import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
+import com.amazonaws.services.ec2.model.FleetType;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Region;
-import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
+import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.collect.ImmutableSet;
 import hudson.ExtensionList;
@@ -63,6 +62,7 @@ public class EC2FleetCloudTest {
     private SpotFleetRequestConfig spotFleetRequestConfig5;
     private SpotFleetRequestConfig spotFleetRequestConfig6;
     private SpotFleetRequestConfig spotFleetRequestConfig7;
+    private SpotFleetRequestConfig spotFleetRequestConfig8;
 
     @Mock
     private Jenkins jenkins;
@@ -77,18 +77,28 @@ public class EC2FleetCloudTest {
     public void before() {
         spotFleetRequestConfig1 = new SpotFleetRequestConfig();
         spotFleetRequestConfig1.setSpotFleetRequestState(BatchState.Active);
+        spotFleetRequestConfig1.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig2 = new SpotFleetRequestConfig();
         spotFleetRequestConfig2.setSpotFleetRequestState(BatchState.Submitted);
+        spotFleetRequestConfig2.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig3 = new SpotFleetRequestConfig();
         spotFleetRequestConfig3.setSpotFleetRequestState(BatchState.Modifying);
+        spotFleetRequestConfig3.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig4 = new SpotFleetRequestConfig();
         spotFleetRequestConfig4.setSpotFleetRequestState(BatchState.Cancelled);
+        spotFleetRequestConfig4.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig5 = new SpotFleetRequestConfig();
         spotFleetRequestConfig5.setSpotFleetRequestState(BatchState.Cancelled_running);
+        spotFleetRequestConfig5.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig6 = new SpotFleetRequestConfig();
         spotFleetRequestConfig6.setSpotFleetRequestState(BatchState.Cancelled_terminating);
+        spotFleetRequestConfig6.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
         spotFleetRequestConfig7 = new SpotFleetRequestConfig();
         spotFleetRequestConfig7.setSpotFleetRequestState(BatchState.Failed);
+        spotFleetRequestConfig7.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Maintain));
+        spotFleetRequestConfig8 = new SpotFleetRequestConfig();
+        spotFleetRequestConfig8.setSpotFleetRequestState(BatchState.Active);
+        spotFleetRequestConfig8.setSpotFleetRequestConfig(new SpotFleetRequestConfigData().withType(FleetType.Request));
 
         Registry.setEc2Api(ec2Api);
 
@@ -529,7 +539,45 @@ public class EC2FleetCloudTest {
     }
 
     @Test
-    public void descriptorImpl_doFillFleetItems_returnActiveFleets() {
+    public void descriptorImpl_doFillFleetItems_returnEmptyListIfNoMaintainFleets() {
+        AmazonEC2Client amazonEC2Client = mock(AmazonEC2Client.class);
+        when(ec2Api.connect(anyString(), anyString(), anyString())).thenReturn(amazonEC2Client);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = mock(DescribeSpotFleetRequestsResult.class);
+        when(amazonEC2Client.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        when(describeSpotFleetRequestsResult.getSpotFleetRequestConfigs())
+                .thenReturn(Arrays.asList(spotFleetRequestConfig4, spotFleetRequestConfig5,
+                        spotFleetRequestConfig6, spotFleetRequestConfig7, spotFleetRequestConfig8));
+
+        ListBoxModel r = new EC2FleetCloud.DescriptorImpl().doFillFleetItems(
+                false, "", "", "", "");
+
+        assertEquals(0, r.size());
+    }
+
+    @Test
+    public void descriptorImpl_doFillFleetItems_returnEmptyIfFleetTypeIsNull() {
+        AmazonEC2Client amazonEC2Client = mock(AmazonEC2Client.class);
+        when(ec2Api.connect(anyString(), anyString(), anyString())).thenReturn(amazonEC2Client);
+
+        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = mock(DescribeSpotFleetRequestsResult.class);
+        when(amazonEC2Client.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
+                .thenReturn(describeSpotFleetRequestsResult);
+
+        spotFleetRequestConfig8.getSpotFleetRequestConfig().setType((String) null);
+        when(describeSpotFleetRequestsResult.getSpotFleetRequestConfigs())
+                .thenReturn(Arrays.asList(spotFleetRequestConfig8));
+
+        ListBoxModel r = new EC2FleetCloud.DescriptorImpl().doFillFleetItems(
+                false, "", "", "", "");
+
+        assertEquals(0, r.size());
+    }
+
+    @Test
+    public void descriptorImpl_doFillFleetItems_returnActiveAndMaintainFleets() {
         AmazonEC2Client amazonEC2Client = mock(AmazonEC2Client.class);
         when(ec2Api.connect(anyString(), anyString(), anyString())).thenReturn(amazonEC2Client);
 
@@ -540,7 +588,7 @@ public class EC2FleetCloudTest {
         when(describeSpotFleetRequestsResult.getSpotFleetRequestConfigs())
                 .thenReturn(Arrays.asList(spotFleetRequestConfig1, spotFleetRequestConfig2,
                         spotFleetRequestConfig3, spotFleetRequestConfig4, spotFleetRequestConfig5,
-                        spotFleetRequestConfig6, spotFleetRequestConfig7));
+                        spotFleetRequestConfig6, spotFleetRequestConfig7, spotFleetRequestConfig8));
 
         ListBoxModel r = new EC2FleetCloud.DescriptorImpl().doFillFleetItems(
                 false, "", "", "", "");
@@ -549,7 +597,7 @@ public class EC2FleetCloudTest {
     }
 
     @Test
-    public void descriptorImpl_doFillFleetItems_returnAllFleetsIfShowNonActiveIsEnabled() {
+    public void descriptorImpl_doFillFleetItems_returnAllFleetsIfShowAllIsEnabled() {
         AmazonEC2Client amazonEC2Client = mock(AmazonEC2Client.class);
         when(ec2Api.connect(anyString(), anyString(), anyString())).thenReturn(amazonEC2Client);
 
@@ -560,16 +608,16 @@ public class EC2FleetCloudTest {
         when(describeSpotFleetRequestsResult.getSpotFleetRequestConfigs())
                 .thenReturn(Arrays.asList(spotFleetRequestConfig1, spotFleetRequestConfig2,
                         spotFleetRequestConfig3, spotFleetRequestConfig4, spotFleetRequestConfig5,
-                        spotFleetRequestConfig6, spotFleetRequestConfig7));
+                        spotFleetRequestConfig6, spotFleetRequestConfig7, spotFleetRequestConfig8));
 
         ListBoxModel r = new EC2FleetCloud.DescriptorImpl().doFillFleetItems(
                 true, "", "", "", "");
 
-        assertEquals(7, r.size());
+        assertEquals(8, r.size());
     }
 
     @Test
-    public void descriptorImpl_doFillFleetItems_returnFleetInfo() {
+    public void descriptorImpl_doFillFleetItems_returnFleetIdAndStatusType() {
         AmazonEC2Client amazonEC2Client = mock(AmazonEC2Client.class);
         when(ec2Api.connect(anyString(), anyString(), anyString())).thenReturn(amazonEC2Client);
 
@@ -585,7 +633,7 @@ public class EC2FleetCloudTest {
         ListBoxModel r = new EC2FleetCloud.DescriptorImpl().doFillFleetItems(
                 false, "", "", "", "");
 
-        assertEquals("fleet-id (active)", r.get(0).name);
+        assertEquals("fleet-id (active) (maintain)", r.get(0).name);
         assertEquals("fleet-id", r.get(0).value);
     }
 
@@ -728,18 +776,6 @@ public class EC2FleetCloudTest {
 
         // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
         when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
-    }
-
-    private void mockDescribeInstances(String instanceId, String instanceType) {
-        DescribeInstancesResult describeInstancesResult = new DescribeInstancesResult();
-        describeInstancesResult.withReservations(
-                new Reservation().withInstances(new Instance()
-                        .withPublicIpAddress("p-ip")
-                        .withInstanceType(instanceType)
-                        .withInstanceId(instanceId)));
-
-        when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class)))
-                .thenReturn(describeInstancesResult);
     }
 
 }
