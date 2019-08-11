@@ -3,7 +3,7 @@
   <name>Jenkins</name>
   <description>This service runs Jenkins continuous integration system.</description>
   <env name="JENKINS_HOME" value="%BASE%"/>
-  <executable>java</executable>
+  <executable>C:\Windows\Temp\jenkins-slave\jdk.exe\java-se-8u40-ri\bin\java</executable>
   <arguments>-Xrs -Xmx256m -jar "%BASE%\jenkins.war" --httpPort=8080</arguments>
   <logmode>rotate</logmode>
 </service>
