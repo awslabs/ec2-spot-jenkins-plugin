@@ -15,20 +15,15 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.google.common.collect.ImmutableSet;
-import hudson.Functions;
 import hudson.model.Label;
-import hudson.model.Node;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.ComputerLauncher;
-import hudson.slaves.NodeProperty;
 import org.junit.Assert;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.mockito.Mockito;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -54,7 +49,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 0, 1, false, false,
-                false, 0, 0, false, null);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         EC2Api ec2Api = spy(EC2Api.class);
@@ -97,7 +92,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0, false, null);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeFleetNotInstanceWhenModified();
@@ -129,7 +124,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 300, 15, false, null));
+                false, 300, 15, false));
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
@@ -155,7 +150,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0, false, null));
+                false, 0, 0, false));
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
@@ -180,7 +175,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, false, false,
-                false, 0, 0, false, null));
+                false, 0, 0, false));
         j.jenkins.clouds.add(cloud);
 
         EC2Api ec2Api = spy(EC2Api.class);
@@ -232,7 +227,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 1, true, false,
-                false, 0, 0, false, null);
+                false, 0, 0, false);
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Pending);
@@ -249,35 +244,6 @@ public class ProvisionIntegrationTest extends IntegrationTest {
                 Assert.assertEquals(ImmutableSet.of("master", "momo"), labelsToNames(j.jenkins.getLabels()));
                 Assert.assertEquals(1, j.jenkins.getLabelAtom("momo").nodeProvisioner.getPendingLaunches().size());
                 Assert.assertEquals(0, j.jenkins.getNodes().size());
-            }
-        });
-
-        cancelTasks(rs);
-    }
-
-    @Ignore("need to fix for windows 8")
-    @Test
-    public void should_mark_node_online_and_accept_tasks_when_online_and_excute_scripts() throws Exception {
-        final String onlineCheckScript = Functions.isWindows() ? "Ping -n %number% 127.0.0.1 > nul" : "echo 1";
-
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
-                null, "fId", "momo", "/tmp/", new SingleLocalComputerConnector(j), false, false,
-                0, 0, 10, 1, true, false,
-                false, 9000, 1, false, onlineCheckScript);
-        j.jenkins.clouds.add(cloud);
-
-        mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
-
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
-
-        triggerSuggestReviewNow("momo");
-
-        tryUntil(new Runnable() {
-            @Override
-            public void run() {
-                Assert.assertEquals(1, j.jenkins.getNodes().size());
-                Assert.assertEquals(true, j.jenkins.getNodes().get(0).toComputer().isOnline());
-                Assert.assertEquals(true, j.jenkins.getNodes().get(0).isAcceptingTasks());
             }
         });
 
