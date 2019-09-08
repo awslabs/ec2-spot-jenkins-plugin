@@ -1,5 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.google.common.annotations.VisibleForTesting;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.model.Queue;
@@ -14,48 +15,67 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * User: cyberax
- * Date: 1/11/16
- * Time: 13:21
+ * @see EC2FleetCloud
+ * @see EC2FleetStatusWidget
  */
 @Extension
 @SuppressWarnings("unused")
-public class CloudNanny extends PeriodicWork
-{
+public class CloudNanny extends PeriodicWork {
+
     private static final Logger LOGGER = Logger.getLogger(CloudNanny.class.getName());
 
-    @Override public long getRecurrencePeriod() {
+    @Override
+    public long getRecurrencePeriod() {
         return 10000L;
     }
 
-    @Override protected void doRun() throws Exception {
+    @Override
+    protected void doRun() {
+        final List<EC2FleetStatusInfo> info = new ArrayList<>();
+        for (final Cloud cloud : getClouds()) {
+            if (!(cloud instanceof EC2FleetCloud)) continue;
+            final EC2FleetCloud fleetCloud = (EC2FleetCloud) cloud;
 
-        // Trigger reprovisioning as well
-        Jenkins.getActiveInstance().unlabeledNodeProvisioner.suggestReviewNow();
-
-        final List<FleetStateStats> stats = new ArrayList<FleetStateStats>();
-        for(final Cloud cloud : Jenkins.getActiveInstance().clouds) {
-            if (!(cloud instanceof EC2FleetCloud))
-                continue;
-
-            // Update the cluster states
-            final EC2FleetCloud fleetCloud =(EC2FleetCloud) cloud;
-            LOGGER.log(Level.FINE, "Checking cloud: " + fleetCloud.getLabelString() );
-            stats.add(Queue.withLock(new Callable<FleetStateStats>() {
-                @Override
-                public FleetStateStats call()
-                        throws Exception
-                {
-                    return fleetCloud.updateStatus();
-                }
-            }));
+            try {
+                // Update the cluster states
+                info.add(Queue.withLock(new Callable<EC2FleetStatusInfo>() {
+                    @Override
+                    public EC2FleetStatusInfo call() {
+                        final FleetStateStats stats = fleetCloud.updateStatus();
+                        return new EC2FleetStatusInfo(
+                                fleetCloud.getFleet(), stats.getState(), fleetCloud.getLabelString(),
+                                stats.getNumActive(), stats.getNumDesired());
+                    }
+                }));
+            } catch (Exception e) {
+                // could bad configuration or real exception, we can't do too much here
+                LOGGER.log(Level.INFO, String.format("Error during fleet %s stats update", fleetCloud.name), e);
+            }
         }
 
-        for (final Widget w : Jenkins.getInstance().getWidgets()) {
-            if (!(w instanceof FleetStatusWidget))
-                continue;
-
-            ((FleetStatusWidget)w).setStatusList(stats);
+        for (final Widget w : getWidgets()) {
+            if (w instanceof EC2FleetStatusWidget) ((EC2FleetStatusWidget) w).setStatusList(info);
         }
+    }
+
+    /**
+     * Will be mocked by tests to avoid deal with jenkins
+     *
+     * @return widgets
+     */
+    @VisibleForTesting
+    private static List<Widget> getWidgets() {
+        return Jenkins.getActiveInstance().getWidgets();
+    }
+
+    /**
+     * We return {@link List} instead of original {@link jenkins.model.Jenkins.CloudList}
+     * to simplify testing as jenkins list requires actual {@link Jenkins} instance.
+     *
+     * @return basic java list
+     */
+    @VisibleForTesting
+    private static List<Cloud> getClouds() {
+        return Jenkins.getActiveInstance().clouds;
     }
 }

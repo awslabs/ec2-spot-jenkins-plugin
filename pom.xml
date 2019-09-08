@@ -11,7 +11,7 @@
 
   <groupId>com.amazon.jenkins.fleet</groupId>
   <artifactId>ec2-fleet</artifactId>
-  <version>1.1.10-SNAPSHOT</version>
+  <version>1.11.2-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <properties>
@@ -31,9 +31,9 @@
 
   <developers>
     <developer>
-      <id>cyberax</id>
-      <name>Aleksei Besogonov</name>
-      <email>cyberax@amazon.com</email>
+      <id>terma</id>
+      <name>Artem Stasiuk</name>
+      <email>artem.stasuk@gmail.com</email>
     </developer>
     <developer>
       <id>schmutze</id>
@@ -67,17 +67,17 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.1.13</version>
+      <version>2.1.19</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-java-sdk</artifactId>
-      <version>1.11.119</version>
+      <version>1.11.341</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>aws-credentials</artifactId>
-      <version>1.20</version>
+      <version>1.24</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -89,6 +89,28 @@
       <artifactId>jackson2-api</artifactId>
       <version>2.7.3</version>
     </dependency>
+
+    <!-- tests -->
+
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-module-junit4</artifactId>
+      <version>2.0.2</version>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.powermock</groupId>
+      <artifactId>powermock-api-mockito2</artifactId>
+      <version>2.0.2</version>
+      <scope>test</scope>
+      <exclusions>
+        <exclusion>
+          <groupId>org.objenesis</groupId>
+          <artifactId>objenesis</artifactId>
+        </exclusion>
+      </exclusions>
+    </dependency>
+
   </dependencies>
 
   <build>
