@@ -4,79 +4,89 @@ import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
+
+import javax.annotation.concurrent.GuardedBy;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * User: cyberax
- * Date: 1/12/16
- * Time: 02:56
+ * @see EC2FleetCloud
  */
-public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer>
-{
-    private final int maxIdleMinutes;
-    private final boolean alwaysReconnect;
-    private final EC2FleetCloud parent;
+public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
+
+    private static final int RE_CHECK_IN_MINUTE = 1;
 
     private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
 
-    public IdleRetentionStrategy(final EC2FleetCloud parent) {
-        this.maxIdleMinutes = parent.getIdleMinutes();
-        this.alwaysReconnect = parent.isAlwaysReconnect();
-        this.parent = parent;
-        LOGGER.log(Level.INFO, "Idle Retention initiated");
-    }
+    /**
+     * Will be called under {@link hudson.model.Queue#withLock(Runnable)}
+     *
+     * @param computer computer
+     * @return delay in min before next run
+     */
+    @GuardedBy("Queue.withLock")
+    @Override
+    public long check(final SlaveComputer computer) {
+        final EC2FleetNodeComputer fc = (EC2FleetNodeComputer) computer;
+        final EC2FleetCloud cloud = fc.getCloud();
 
-    protected boolean isIdleForTooLong(final Computer c) {
-        boolean isTooLong = false;
-        if(maxIdleMinutes > 0) {
-            long age = System.currentTimeMillis()-c.getIdleStartMilliseconds();
-            long maxAge = maxIdleMinutes*60*1000;
-            LOGGER.log(Level.FINE, "Instance: " + c.getDisplayName() + " Age: " + age + " Max Age:" + maxAge);
-            isTooLong = age > maxAge;
+        // in some multi-thread edge cases cloud could be null for some time, just be ok with that
+        if (cloud == null) {
+            LOGGER.warning("Edge case cloud is null for computer " + fc.getDisplayName()
+                    + " should be autofixed in a few minutes, if no please create issue for plugin");
+            return RE_CHECK_IN_MINUTE;
         }
-        return isTooLong;
-    }
 
-    @Override public long check(final SlaveComputer c) {
         // Ensure that the EC2FleetCloud cannot be mutated from under us while
         // we're doing this check
-        synchronized(parent) {
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (cloud) {
             // Ensure nobody provisions onto this node until we've done
             // checking
-            boolean shouldAcceptTasks = c.isAcceptingTasks();
+            boolean shouldAcceptTasks = fc.isAcceptingTasks();
             boolean justTerminated = false;
-            c.setAcceptingTasks(false);
+            fc.setAcceptingTasks(false);
             try {
-                if (isIdleForTooLong(c)) {
+                if (fc.isIdle() && isIdleForTooLong(cloud, fc)) {
                     // Find instance ID
-                    Node compNode = c.getNode();
+                    Node compNode = fc.getNode();
                     if (compNode == null) {
                         return 0;
                     }
 
                     final String nodeId = compNode.getNodeName();
-                    if (parent.terminateInstance(nodeId)) {
+                    if (cloud.terminateInstance(nodeId)) {
                         // Instance successfully terminated, so no longer accept tasks
                         shouldAcceptTasks = false;
                         justTerminated = true;
                     }
                 }
 
-                if (alwaysReconnect && !justTerminated && c.isOffline() && !c.isConnecting() && c.isLaunchSupported()) {
-                    LOGGER.log(Level.INFO, "Reconnecting to instance: " + c.getDisplayName());
-                    c.tryReconnect();
+                if (cloud.isAlwaysReconnect() && !justTerminated && fc.isOffline() && !fc.isConnecting() && fc.isLaunchSupported()) {
+                    LOGGER.log(Level.INFO, "Reconnecting to instance: " + fc.getDisplayName());
+                    fc.tryReconnect();
                 }
             } finally {
-                c.setAcceptingTasks(shouldAcceptTasks);
+                fc.setAcceptingTasks(shouldAcceptTasks);
             }
         }
 
-        return 1;
+        return RE_CHECK_IN_MINUTE;
     }
 
-    @Override public void start(SlaveComputer c) {
+    @Override
+    public void start(SlaveComputer c) {
         LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
         c.connect(false);
+    }
+
+    private boolean isIdleForTooLong(final EC2FleetCloud cloud, final Computer computer) {
+        final int idleMinutes = cloud.getIdleMinutes();
+        if (idleMinutes <= 0) return false;
+        final long idleTime = System.currentTimeMillis() - computer.getIdleStartMilliseconds();
+        final long maxIdle = TimeUnit.MINUTES.toMillis(idleMinutes);
+        LOGGER.log(Level.FINE, "Instance: " + computer.getDisplayName() + " Age: " + idleTime + " Max Age:" + maxIdle);
+        return idleTime > maxIdle;
     }
 }
