@@ -3,14 +3,12 @@ package com.amazon.jenkins.ec2fleet;
 import com.google.common.annotations.VisibleForTesting;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
-import hudson.model.Queue;
 import hudson.slaves.Cloud;
 import hudson.widgets.Widget;
 import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Callable;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -29,6 +27,12 @@ public class CloudNanny extends PeriodicWork {
         return 10000L;
     }
 
+    /**
+     * <h2>Exceptions</h2>
+     * This method will be executed by {@link PeriodicWork} inside {@link java.util.concurrent.ScheduledExecutorService}
+     * by default it stops execution if task throws exception, however {@link PeriodicWork} fix that
+     * by catch any exception and just log it, so we safe to throw exception here.
+     */
     @Override
     protected void doRun() {
         final List<EC2FleetStatusInfo> info = new ArrayList<>();
@@ -38,15 +42,10 @@ public class CloudNanny extends PeriodicWork {
 
             try {
                 // Update the cluster states
-                info.add(Queue.withLock(new Callable<EC2FleetStatusInfo>() {
-                    @Override
-                    public EC2FleetStatusInfo call() {
-                        final FleetStateStats stats = fleetCloud.updateStatus();
-                        return new EC2FleetStatusInfo(
-                                fleetCloud.getFleet(), stats.getState(), fleetCloud.getLabelString(),
-                                stats.getNumActive(), stats.getNumDesired());
-                    }
-                }));
+                final FleetStateStats stats = fleetCloud.update();
+                info.add(new EC2FleetStatusInfo(
+                        fleetCloud.getFleet(), stats.getState(), fleetCloud.getLabelString(),
+                        stats.getNumActive(), stats.getNumDesired()));
             } catch (Exception e) {
                 // could bad configuration or real exception, we can't do too much here
                 LOGGER.log(Level.INFO, String.format("Error during fleet %s stats update", fleetCloud.name), e);
