@@ -1,6 +1,8 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Objects;
+import com.google.common.collect.MapMaker;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.slaves.Cloud;
@@ -9,6 +11,8 @@ import jenkins.model.Jenkins;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -22,9 +26,14 @@ public class CloudNanny extends PeriodicWork {
 
     private static final Logger LOGGER = Logger.getLogger(CloudNanny.class.getName());
 
+    private final ConcurrentMap<EC2FleetCloud, AtomicInteger> recurrenceCounters = new MapMaker()
+            .weakKeys() // the map should not hold onto fleet instances to allow deletion of fleets.
+            .concurrencyLevel(1)
+            .makeMap();
+
     @Override
     public long getRecurrencePeriod() {
-        return 10000L;
+        return 1000L;
     }
 
     /**
@@ -39,6 +48,14 @@ public class CloudNanny extends PeriodicWork {
         for (final Cloud cloud : getClouds()) {
             if (!(cloud instanceof EC2FleetCloud)) continue;
             final EC2FleetCloud fleetCloud = (EC2FleetCloud) cloud;
+
+            AtomicInteger recurrenceCounter = getRecurrenceCounter(fleetCloud);
+
+            if (recurrenceCounter.decrementAndGet() > 0) {
+                continue;
+            }
+
+            recurrenceCounter.set(fleetCloud.getCloudStatusIntervalSec());
 
             try {
                 // Update the cluster states
@@ -76,5 +93,12 @@ public class CloudNanny extends PeriodicWork {
     @VisibleForTesting
     private static List<Cloud> getClouds() {
         return Jenkins.getActiveInstance().clouds;
+    }
+
+    @VisibleForTesting
+    private AtomicInteger getRecurrenceCounter(EC2FleetCloud fleetCloud) {
+        AtomicInteger counter = new AtomicInteger(fleetCloud.getCloudStatusIntervalSec());
+        // If a counter already exists, return the value, otherwise set the new counter value and return it.
+        return Objects.firstNonNull(recurrenceCounters.putIfAbsent(fleetCloud, counter), counter);
     }
 }
