@@ -4,6 +4,7 @@
 
 Use this one instead of [Original repo in awslabs](https://github.com/awslabs/ec2-spot-jenkins-plugin)
 
+
 The EC2 Spot Jenkins plugin launches EC2 Spot instances as worker nodes for Jenkins CI server, 
 automatically scaling the capacity with the load. 
 
@@ -259,3 +260,4 @@ sudo yum install java-1.8.0
 sudo yum remove java-1.7.0-openjdk
 java -version 
 ```
+
