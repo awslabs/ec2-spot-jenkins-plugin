@@ -12,6 +12,7 @@ automatically scaling the capacity with the load.
 * [Jenkins Page](https://wiki.jenkins.io/display/JENKINS/Amazon+EC2+Fleet+Plugin)
 * [Report Issue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/new)
 * [Overview](#overview)
+* [Features](#features)
 * [Change Log](#change-log)
 * [Usage](#usage)
   * [Setup](#setup)
@@ -25,6 +26,14 @@ This plugin uses Spot Fleet to launch instances instead of directly launching th
 Amazon EC2 attempts to maintain your Spot fleet's target capacity as Spot prices change to maintain
 the fleet within the specified price range. For more information, see 
 [How Spot Fleet Works](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html).
+
+# Features
+
+- Supports all features provided by EC2 Spot Fleet
+- Auto resubmit Jobs failed because of Spot Interruption
+- Allow no delay scale up strategy, enable ```No Delay Provision Strategy``` in configuration
+- Add tags to EC2 instances used by plugin, for easy search, tag format ```ec2-fleet-plugin:cloud-name=<MyCloud>```
+- Allow custom EC2 API endpoint
 
 # Change Log
 
