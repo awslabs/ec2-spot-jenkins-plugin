@@ -59,6 +59,9 @@ import java.util.logging.SimpleFormatter;
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class EC2FleetCloud extends Cloud {
 
+    public static final String EC2_INSTANCE_TAG_NAMESPACE = "ec2-fleet-plugin";
+    public static final String EC2_INSTANCE_CLOUD_NAME_TAG = EC2_INSTANCE_TAG_NAMESPACE + ":cloud-name";
+
     public static final String FLEET_CLOUD_ID = "FleetCloud";
 
     public static final int DEFAULT_CLOUD_STATUS_INTERVAL_SEC = 10;
@@ -504,6 +507,15 @@ public class EC2FleetCloud extends Cloud {
 
         // If we have new instances - create nodes for them!
         if (newFleetInstances.size() > 0) {
+            // we tag new instances to help users to identify instances launched from plugin managed fleets
+            // if failed we are fine to skip this call
+            try {
+                Registry.getEc2Api().tagInstances(ec2, newFleetInstances.keySet(),
+                        EC2_INSTANCE_CLOUD_NAME_TAG, name);
+            } catch (final Exception e) {
+                warning(e, "failed to tag new instances %s, skip", newFleetInstances.keySet());
+            }
+
             // addNewSlave will call addNode which call queue lock
             // we speed up this by getting one lock for all nodes to all
             Queue.withLock(new Runnable() {
