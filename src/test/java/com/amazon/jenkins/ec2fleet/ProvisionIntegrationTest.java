@@ -15,11 +15,8 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.google.common.collect.ImmutableSet;
-import hudson.model.Computer;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Label;
-import hudson.model.Node;
-import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.ComputerConnector;
@@ -35,7 +32,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -63,7 +59,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 0, 1, false, false,
+                0, 0, 0, 1, false,
                 false, 0, 0, false,
                 2, false);
         j.jenkins.clouds.add(cloud);
@@ -86,7 +82,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
                 .thenReturn(describeSpotFleetRequestsResult);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(5);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(5);
 
         Assert.assertEquals(0, j.jenkins.getNodes().size());
 
@@ -109,12 +105,12 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 2, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         triggerSuggestReviewNow("momo");
 
@@ -140,7 +136,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 300, 15, false,
                 2, false));
 
@@ -152,7 +148,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         final String labelString = "momo";
         triggerSuggestReviewNow(labelString);
@@ -172,14 +168,14 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 10, false));
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
 
-        getQueueTaskFutures(1);
+        enqueTask(1);
 
         tryUntil(new Runnable() {
             @Override
@@ -198,7 +194,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 10, false));
 
@@ -234,7 +230,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
                 .thenReturn(describeSpotFleetRequestsResult);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
 
@@ -255,14 +251,14 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, true, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 2, false);
         j.jenkins.clouds.add(cloud);
 
         mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Pending);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         triggerSuggestReviewNow("momo");
 
@@ -287,7 +283,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                1, 0, 5, 1, true, false,
+                1, 0, 5, 1, false,
                 false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
@@ -305,17 +301,11 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 //        });
 
         final List<QueueTaskFuture<FreeStyleBuild>> tasks = new ArrayList<>();
-        tasks.addAll((List) getQueueTaskFutures(5));
+        tasks.addAll((List) enqueTask(5));
         System.out.println("tasks submitted");
 
         // wait full execution
-        for (final QueueTaskFuture<FreeStyleBuild> task : tasks) {
-            try {
-                Assert.assertEquals(task.get().getResult(), Result.SUCCESS);
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        waitJobSuccessfulExecution(tasks);
 
         // wait until downscale happens
         tryUntil(new Runnable() {

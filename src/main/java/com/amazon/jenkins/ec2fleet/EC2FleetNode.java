@@ -20,6 +20,7 @@ public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudA
 
     public EC2FleetNode(final String name, final String nodeDescription, final String remoteFS, final int numExecutors, final Mode mode, final String label,
                         final List<? extends NodeProperty<?>> nodeProperties, final EC2FleetCloud cloud, ComputerLauncher launcher) throws IOException, Descriptor.FormException {
+        //noinspection deprecation
         super(name, nodeDescription, remoteFS, numExecutors, mode, label,
                 launcher, RetentionStrategy.NOOP, nodeProperties);
         this.cloud = cloud;

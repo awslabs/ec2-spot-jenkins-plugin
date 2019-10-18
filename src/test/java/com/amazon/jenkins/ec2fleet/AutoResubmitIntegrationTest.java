@@ -1,20 +1,17 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.ActiveInstance;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesResult;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
-import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
+import com.google.common.collect.ImmutableSet;
 import hudson.Functions;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
 import hudson.model.ParametersAction;
@@ -27,13 +24,14 @@ import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.OfflineCause;
 import hudson.tasks.BatchFile;
 import hudson.tasks.Shell;
+import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -42,13 +40,20 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings({"ArraysAsListWithZeroOrOneArgument", "deprecation"})
+@SuppressWarnings({"deprecation"})
 public class AutoResubmitIntegrationTest extends IntegrationTest {
 
     @Before
     public void before() {
+        EC2Fleet ec2Fleet = mock(EC2Fleet.class);
+
+        EC2Fleets.setGet(ec2Fleet);
+
         EC2Api ec2Api = spy(EC2Api.class);
         Registry.setEc2Api(ec2Api);
+
+        when(ec2Fleet.getState(any(), any(), any(), any())).thenReturn(
+                new FleetStateStats("", 1, "active", ImmutableSet.of("i-1"), Collections.emptyMap()));
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(anyString(), anyString(), Mockito.nullable(String.class))).thenReturn(amazonEC2);
@@ -63,31 +68,23 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
                         new Reservation().withInstances(
                                 instance
                         )));
+    }
 
-        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
-                .thenReturn(new DescribeSpotFleetInstancesResult()
-                        .withActiveInstances(new ActiveInstance().withInstanceId("i-1")));
-
-        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
-        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
-                new SpotFleetRequestConfig()
-                        .withSpotFleetRequestState("active")
-                        .withSpotFleetRequestConfig(
-                                new SpotFleetRequestConfigData().withTargetCapacity(1))));
-        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
-                .thenReturn(describeSpotFleetRequestsResult);
+    @After
+    public void after() {
+        EC2Fleets.setGet(null);
     }
 
     @Test
     public void should_successfully_resubmit_freestyle_task() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         System.out.println("check if zero nodes!");
         Assert.assertEquals(0, j.jenkins.getNodes().size());
@@ -119,12 +116,12 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
     public void should_successfully_resubmit_parametrized_task() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = new ArrayList<>();
+        List<QueueTaskFuture<FreeStyleBuild>> rs = new ArrayList<>();
         final FreeStyleProject project = j.createFreeStyleProject();
         project.setAssignedLabel(new LabelAtom("momo"));
         project.addProperty(new ParametersDefinitionProperty(new StringParameterDefinition("number", "opa")));
@@ -176,11 +173,11 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
     public void should_not_resubmit_if_disabled() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false,
                 true, 0, 0, false, 10, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture<FreeStyleBuild>> rs = enqueTask(1);
 
         System.out.println("check if zero nodes!");
         Assert.assertEquals(0, j.jenkins.getNodes().size());

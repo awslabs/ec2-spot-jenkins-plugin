@@ -266,8 +266,8 @@ https://issues.jenkins-ci.org/browse/JENKINS-53954
 ### Install Java 8 on EC2 instance 
 
 ```bash
-sudo yum install java-1.8.0
-sudo yum remove java-1.7.0-openjdk
+sudo yum install java-1.8.0 -y
+sudo yum remove java-1.7.0-openjdk -y
 java -version 
 ```
 

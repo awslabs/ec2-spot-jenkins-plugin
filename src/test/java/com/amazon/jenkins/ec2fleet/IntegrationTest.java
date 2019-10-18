@@ -19,6 +19,7 @@ import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import hudson.Functions;
 import hudson.model.AbstractBuild;
+import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Label;
 import hudson.model.Node;
@@ -29,6 +30,7 @@ import hudson.model.queue.QueueTaskFuture;
 import hudson.tasks.BatchFile;
 import hudson.tasks.Shell;
 import jenkins.model.Jenkins;
+import org.hamcrest.Matchers;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.ClassRule;
@@ -46,6 +48,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -64,6 +67,7 @@ public abstract class IntegrationTest {
 
     protected static final long JOB_SLEEP_TIME = 30;
 
+
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
 
@@ -74,6 +78,11 @@ public abstract class IntegrationTest {
     public void after() {
         // restore
         Registry.setEc2Api(new EC2Api());
+    }
+
+    protected static void turnOffJenkinsTestTimout() {
+        // zero is unlimited timeout
+        System.setProperty("jenkins.test.timeout", "0");
     }
 
     protected static void assertQueueAndNodesIdle(final Node node) {
@@ -167,22 +176,34 @@ public abstract class IntegrationTest {
         }
     }
 
-    protected void cancelTasks(List<QueueTaskFuture> rs) {
+    protected void waitZeroNodes() {
+        System.out.println("wait until downscale happens");
+        tryUntil(new Runnable() {
+            @Override
+            public void run() {
+                Assert.assertThat(j.jenkins.getLabel("momo").getNodes().size(), Matchers.lessThanOrEqualTo(0));
+            }
+        }, TimeUnit.MINUTES.toMillis(3));
+    }
+
+    protected void cancelTasks(List<QueueTaskFuture<FreeStyleBuild>> rs) {
         for (QueueTaskFuture r : rs) {
             r.cancel(true);
         }
     }
 
-    protected List<QueueTaskFuture> getQueueTaskFutures(int count) throws IOException {
+    protected List<QueueTaskFuture<FreeStyleBuild>> enqueTask(int count) throws IOException {
         final LabelAtom label = new LabelAtom("momo");
 
-        final List<QueueTaskFuture> rs = new ArrayList<>();
+        final List<QueueTaskFuture<FreeStyleBuild>> rs = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             final FreeStyleProject project = j.createFreeStyleProject();
             project.setAssignedLabel(label);
             project.getBuildersList().add(Functions.isWindows() ? new BatchFile("Ping -n " + JOB_SLEEP_TIME + " 127.0.0.1 > nul") : new Shell("sleep " + JOB_SLEEP_TIME));
             rs.add(project.scheduleBuild2(0));
         }
+
+        System.out.println(count + " tasks submitted");
         return rs;
     }
 
@@ -190,6 +211,16 @@ public abstract class IntegrationTest {
         Set<String> r = new HashSet<>();
         for (Label l : labels) r.add(l.getName());
         return r;
+    }
+
+    protected static void waitJobSuccessfulExecution(final List<QueueTaskFuture<FreeStyleBuild>> tasks) {
+        for (final QueueTaskFuture<FreeStyleBuild> task : tasks) {
+            try {
+                Assert.assertEquals(task.get().getResult(), Result.SUCCESS);
+            } catch (InterruptedException | ExecutionException e) {
+                throw new RuntimeException(e);
+            }
+        }
     }
 
     private static class AnswerWithDelay<T> implements Answer<T> {

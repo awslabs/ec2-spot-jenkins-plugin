@@ -63,7 +63,7 @@ public class ProvisionPerformanceTest extends IntegrationTest {
         final int taskBatch = 5;
 
         while (tasks.size() < maxTasks) {
-            tasks.addAll((List) getQueueTaskFutures(taskBatch));
+            tasks.addAll((List) enqueTask(taskBatch));
             triggerSuggestReviewNow("momo");
             System.out.println(taskBatch + " added into queue, " + (maxTasks - tasks.size()) + " remain");
         }

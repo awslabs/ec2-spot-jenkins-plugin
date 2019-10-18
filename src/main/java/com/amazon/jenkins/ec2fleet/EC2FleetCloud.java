@@ -1,18 +1,12 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.BatchState;
 import com.amazonaws.services.ec2.model.DescribeRegionsResult;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
-import com.amazonaws.services.ec2.model.FleetType;
 import com.amazonaws.services.ec2.model.Instance;
-import com.amazonaws.services.ec2.model.InstanceStateName;
-import com.amazonaws.services.ec2.model.ModifySpotFleetRequestRequest;
 import com.amazonaws.services.ec2.model.Region;
-import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.util.concurrent.SettableFuture;
@@ -35,7 +29,6 @@ import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-import org.springframework.util.ObjectUtils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -122,7 +115,6 @@ public class EC2FleetCloud extends Cloud {
     private final Integer minSize;
     private final Integer maxSize;
     private final Integer numExecutors;
-    private final boolean addNodeOnlyIfRunning;
     private final boolean restrictUsage;
     private final boolean scaleExecutorsByWeight;
     private final Integer initOnlineTimeoutSec;
@@ -174,7 +166,6 @@ public class EC2FleetCloud extends Cloud {
                          final Integer minSize,
                          final Integer maxSize,
                          final Integer numExecutors,
-                         final boolean addNodeOnlyIfRunning,
                          final boolean restrictUsage,
                          final boolean disableTaskResubmit,
                          final Integer initOnlineTimeoutSec,
@@ -198,7 +189,6 @@ public class EC2FleetCloud extends Cloud {
         this.minSize = minSize;
         this.maxSize = maxSize;
         this.numExecutors = numExecutors;
-        this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
         this.scaleExecutorsByWeight = scaleExecutorsByWeight;
         this.disableTaskResubmit = disableTaskResubmit;
@@ -268,10 +258,6 @@ public class EC2FleetCloud extends Cloud {
 
     public String getFsRoot() {
         return fsRoot;
-    }
-
-    public boolean isAddNodeOnlyIfRunning() {
-        return addNodeOnlyIfRunning;
     }
 
     public ComputerConnector getComputerConnector() {
@@ -412,11 +398,8 @@ public class EC2FleetCloud extends Cloud {
             final int targetCapacity = stats.getNumDesired() - currentInstanceIdsToTerminate.size() + toAdd;
             // we do update any time even real capacity was not update like remove one add one to
             // update fleet settings with NoTermination so we can terminate instances on our own
-            final ModifySpotFleetRequestRequest request = new ModifySpotFleetRequestRequest();
-            request.setSpotFleetRequestId(fleet);
-            request.setTargetCapacity(targetCapacity);
-            request.setExcessCapacityTerminationPolicy("NoTermination");
-            ec2.modifySpotFleetRequest(request);
+            EC2Fleets.get(fleet).modify(
+                    getAwsCredentialsId(), region, endpoint, fleet, targetCapacity);
             info("Update fleet target capacity to %s", targetCapacity);
         }
 
@@ -445,15 +428,16 @@ public class EC2FleetCloud extends Cloud {
             info("Instances %s were terminated with result", currentInstanceIdsToTerminate);
         }
 
-        final FleetStateStats currentStats = FleetStateStats.readClusterState(ec2, getFleet(), labelString);
-        info("fleet instances: %s", currentStats.getInstances());
+        final FleetStateStats currentStats = EC2Fleets.get(fleet).getState(
+                getAwsCredentialsId(), region, endpoint, getFleet());
+        info("fleet instances %s", currentStats.getInstances());
 
         // Set up the lists of Jenkins nodes and fleet instances
         // currentFleetInstances contains instances currently in the fleet
         final Set<String> fleetInstances = new HashSet<>(currentStats.getInstances());
 
         final Map<String, Instance> described = Registry.getEc2Api().describeInstances(ec2, fleetInstances);
-        info("described instances: %s", described.keySet());
+        info("described instances %s", described.keySet());
 
         // currentJenkinsNodes contains all registered Jenkins nodes related to this cloud
         final Set<String> jenkinsInstances = new HashSet<>();
@@ -617,10 +601,6 @@ public class EC2FleetCloud extends Cloud {
     private void addNewSlave(final AmazonEC2 ec2, final Instance instance, FleetStateStats stats) throws Exception {
         final String instanceId = instance.getInstanceId();
 
-        // instance state check enabled and not running, skip adding
-        if (addNodeOnlyIfRunning && InstanceStateName.Running != InstanceStateName.fromValue(instance.getState().getName()))
-            return;
-
         final String address = privateIpUsed ? instance.getPrivateIpAddress() : instance.getPublicIpAddress();
         // Check if we have the address to use. Nodes don't get it immediately.
         if (address == null) {
@@ -701,16 +681,11 @@ public class EC2FleetCloud extends Cloud {
     @SuppressWarnings("unused")
     public static class DescriptorImpl extends Descriptor<Cloud> {
 
-        public boolean useInstanceProfileForCredentials;
         public String accessId;
         public String secretKey;
         public String region;
-        public String fleet;
-        public String userName = "root";
-        public boolean privateIpUsed;
-        public boolean alwaysReconnect;
-        public boolean restrictUsage;
         public String privateKey;
+        public String fleet;
         public boolean showAllFleets;
 
         public DescriptorImpl() {
@@ -720,7 +695,7 @@ public class EC2FleetCloud extends Cloud {
 
         @Override
         public String getDisplayName() {
-            return "Amazon SpotFleet";
+            return "Amazon AWS EC2";
         }
 
         public List getComputerConnectorDescriptors() {
@@ -764,25 +739,10 @@ public class EC2FleetCloud extends Cloud {
                                              @QueryParameter final String fleet) {
             final ListBoxModel model = new ListBoxModel();
             try {
-                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region, endpoint);
-                String token = null;
-                do {
-                    final DescribeSpotFleetRequestsRequest req = new DescribeSpotFleetRequestsRequest();
-                    req.withNextToken(token);
-                    final DescribeSpotFleetRequestsResult result = client.describeSpotFleetRequests(req);
-                    for (final SpotFleetRequestConfig config : result.getSpotFleetRequestConfigs()) {
-                        final String curFleetId = config.getSpotFleetRequestId();
-                        final boolean selected = ObjectUtils.nullSafeEquals(fleet, curFleetId);
-                        if (selected || showAllFleets || isSpotFleetActiveAndMaintain(config)) {
-                            final String displayStr = curFleetId +
-                                    " (" + config.getSpotFleetRequestState() + ")" +
-                                    " (" + config.getSpotFleetRequestConfig().getType() + ")";
-                            model.add(new ListBoxModel.Option(displayStr, curFleetId, selected));
-                        }
-                    }
-                    token = result.getNextToken();
-                } while (token != null);
-
+                for (final EC2Fleet EC2Fleet : EC2Fleets.all()) {
+                    EC2Fleet.describe(
+                            awsCredentialsId, region, endpoint, model, fleet, showAllFleets);
+                }
             } catch (final Exception ex) {
                 LOGGER.log(Level.WARNING, String.format("Cannot describe fleets in %s or by endpoint %s", region, endpoint), ex);
                 return model;
@@ -791,27 +751,14 @@ public class EC2FleetCloud extends Cloud {
             return model;
         }
 
-        /**
-         * @param config - config
-         * @return return <code>true</code> not only for {@link BatchState#Active} but for any other
-         * in which fleet in theory could accept load.
-         */
-        private boolean isSpotFleetActiveAndMaintain(final SpotFleetRequestConfig config) {
-            return FleetType.Maintain.toString().equals(config.getSpotFleetRequestConfig().getType()) && (
-                    BatchState.Active.toString().equals(config.getSpotFleetRequestState())
-                            || BatchState.Modifying.toString().equals(config.getSpotFleetRequestState())
-                            || BatchState.Submitted.toString().equals(config.getSpotFleetRequestState()));
-        }
-
         public FormValidation doTestConnection(
                 @QueryParameter final String awsCredentialsId,
                 @QueryParameter final String region,
                 @QueryParameter final String endpoint,
                 @QueryParameter final String fleet) {
             try {
-                final AmazonEC2 client = Registry.getEc2Api().connect(awsCredentialsId, region, endpoint);
-                client.describeSpotFleetInstances(
-                        new DescribeSpotFleetInstancesRequest().withSpotFleetRequestId(fleet));
+                // read state to check if we have access
+                EC2Fleets.get(fleet).getState(awsCredentialsId, region, endpoint, fleet);
             } catch (final Exception ex) {
                 return FormValidation.error(ex.getMessage());
             }
@@ -844,6 +791,7 @@ public class EC2FleetCloud extends Cloud {
         public String getFleet() {
             return fleet;
         }
+
     }
 
 }
