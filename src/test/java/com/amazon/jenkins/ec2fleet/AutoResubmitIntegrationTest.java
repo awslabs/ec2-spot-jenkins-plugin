@@ -1,19 +1,15 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazonaws.services.ec2.AmazonEC2;
-import com.amazonaws.services.ec2.model.ActiveInstance;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetInstancesResult;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
-import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
-import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
-import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
+import com.google.common.collect.ImmutableSet;
 import hudson.Functions;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -33,22 +29,32 @@ import org.junit.Test;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
-@SuppressWarnings({"ArraysAsListWithZeroOrOneArgument", "deprecation"})
+@SuppressWarnings({"deprecation"})
 public class AutoResubmitIntegrationTest extends IntegrationTest {
 
     @Before
     public void before() {
+        EC2Fleet ec2Fleet = mock(EC2Fleet.class);
+
+        EC2Fleets.setGet(ec2Fleet);
+
         EC2Api ec2Api = spy(EC2Api.class);
         Registry.setEc2Api(ec2Api);
+
+        when(ec2Fleet.getState(anyString(), anyString(), nullable(String.class), anyString())).thenReturn(
+                new FleetStateStats("", 1, FleetStateStats.State.active(), ImmutableSet.of("i-1"),
+                        Collections.<String, Double>emptyMap()));
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(anyString(), anyString(), Mockito.nullable(String.class))).thenReturn(amazonEC2);
@@ -63,34 +69,19 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
                         new Reservation().withInstances(
                                 instance
                         )));
-
-        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
-                .thenReturn(new DescribeSpotFleetInstancesResult()
-                        .withActiveInstances(new ActiveInstance().withInstanceId("i-1")));
-
-        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
-        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
-                new SpotFleetRequestConfig()
-                        .withSpotFleetRequestState("active")
-                        .withSpotFleetRequestConfig(
-                                new SpotFleetRequestConfigData().withTargetCapacity(1))));
-        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
-                .thenReturn(describeSpotFleetRequestsResult);
     }
 
     @Test
     public void should_successfully_resubmit_freestyle_task() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false, true,
                 false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
-
-        System.out.println("check if zero nodes!");
-        Assert.assertEquals(0, j.jenkins.getNodes().size());
+        List<QueueTaskFuture> rs = enqueTask(1);
+        triggerSuggestReviewNow();
 
         assertAtLeastOneNode();
 
@@ -119,7 +110,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
     public void should_successfully_resubmit_parametrized_task() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false, true,
                 false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
@@ -148,9 +139,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
 
         rs.add(project.scheduleBuild2(0, new ParametersAction(new StringParameterValue("number", "30"))));
 
-        System.out.println("check if zero nodes!");
-        Assert.assertEquals(0, j.jenkins.getNodes().size());
-
+        triggerSuggestReviewNow();
         assertAtLeastOneNode();
 
         final Node node = j.jenkins.getNodes().get(0);
@@ -176,14 +165,12 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
     public void should_not_resubmit_if_disabled() throws Exception {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, false, true,
                 true, 0, 0, false, 10, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
-
-        System.out.println("check if zero nodes!");
-        Assert.assertEquals(0, j.jenkins.getNodes().size());
+        List<QueueTaskFuture> rs = enqueTask(1);
+        triggerSuggestReviewNow();
 
         assertAtLeastOneNode();
 

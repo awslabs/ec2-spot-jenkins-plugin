@@ -29,8 +29,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
 
     @BeforeClass
     public static void beforeClass() {
-        // zero is unlimited timeout
-        System.setProperty("jenkins.test.timeout", "0");
+        turnOffJenkinsTestTimout();
         // set default MARGIN for Jenkins
         System.setProperty(NodeProvisioner.class.getName() + ".MARGIN", Integer.toString(10));
     }
@@ -50,7 +49,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
         final int scheduleInterval = 15;
         final int batchSize = 9;
 
-        mockEc2ApiToDescribeInstancesWhenModifiedWithDelay(InstanceStateName.Running, 500);
+        mockEc2FleetApiToEc2SpotFleetWithDelay(InstanceStateName.Running, 500);
 
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
         final String label = "momo";
@@ -74,7 +73,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
         // warm up jenkins queue, as it takes some time when jenkins run first task and start scale in/out
         // so let's run one task and wait it finish
         System.out.println("waiting warm up task execution");
-        final List<QueueTaskFuture> warmUpTasks = getQueueTaskFutures(1);
+        final List<QueueTaskFuture> warmUpTasks = enqueTask(1);
         waitTasksFinish(warmUpTasks);
 
         final List<ImmutableTriple<Long, Integer, Integer>> metrics = new ArrayList<>();
@@ -106,7 +105,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
         int taskCount = 0;
         final List<QueueTaskFuture> tasks = new ArrayList<>();
         for (int i = 0; i < 15; i++) {
-            tasks.addAll((List) getQueueTaskFutures(batchSize));
+            tasks.addAll(enqueTask(batchSize));
             taskCount += batchSize;
             System.out.println("schedule " + taskCount + " tasks, waiting " + scheduleInterval + " sec");
             Thread.sleep(TimeUnit.SECONDS.toMillis(scheduleInterval));
@@ -123,7 +122,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
     }
 
     private static void waitTasksFinish(List<QueueTaskFuture> tasks) {
-        for (final QueueTaskFuture<FreeStyleBuild> task : tasks) {
+        for (final QueueTaskFuture task : tasks) {
             try {
                 task.get();
             } catch (InterruptedException | ExecutionException e) {

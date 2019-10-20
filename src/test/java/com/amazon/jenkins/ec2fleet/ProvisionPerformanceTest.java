@@ -36,7 +36,7 @@ public class ProvisionPerformanceTest extends IntegrationTest {
     }
 
     private void test(int workers, int maxTasks) throws IOException, InterruptedException {
-        mockEc2ApiToDescribeInstancesWhenModifiedWithDelay(InstanceStateName.Running, 500);
+        mockEc2FleetApiToEc2SpotFleetWithDelay(InstanceStateName.Running, 500);
 
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
         final EC2FleetCloudWithMeter cloud = new EC2FleetCloudWithMeter(null, null, "credId", null, "region",
@@ -63,7 +63,7 @@ public class ProvisionPerformanceTest extends IntegrationTest {
         final int taskBatch = 5;
 
         while (tasks.size() < maxTasks) {
-            tasks.addAll((List) getQueueTaskFutures(taskBatch));
+            tasks.addAll((List) enqueTask(taskBatch));
             triggerSuggestReviewNow("momo");
             System.out.println(taskBatch + " added into queue, " + (maxTasks - tasks.size()) + " remain");
         }

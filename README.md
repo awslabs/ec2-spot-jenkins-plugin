@@ -22,14 +22,16 @@ automatically scaling the capacity with the load.
 * [Development](#development)
 
 # Overview
-This plugin uses Spot Fleet to launch instances instead of directly launching them by itself. 
-Amazon EC2 attempts to maintain your Spot fleet's target capacity as Spot prices change to maintain
+
+This plugin uses EC2 Spot Fleet or [Auto Scaling Group](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroup.html) to launch instances instead of directly launching them by itself. 
+Both maintain your fleet's target capacity as Spot prices change to maintain
 the fleet within the specified price range. For more information, see 
 [How Spot Fleet Works](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html).
 
 # Features
 
-- Supports all features provided by EC2 Spot Fleet
+- Support EC2 Spot Fleet or Auto Scaling Group as Jenkins Workers
+- Supports all features provided by EC2 Spot Fleet or Auto Scaling Groups
 - Auto resubmit Jobs failed because of Spot Interruption
 - Allow no delay scale up strategy, enable ```No Delay Provision Strategy``` in configuration
 - Add tags to EC2 instances used by plugin, for easy search, tag format ```ec2-fleet-plugin:cloud-name=<MyCloud>```
@@ -65,7 +67,7 @@ which will be used by Jenkins EC2 Fleet Plugin to connect to your Spot Fleet
  
 #### 3. Configure User permissions
 
-Add inline policy to the user to allow it use EC2 Spot Fleet 
+Add inline policy to the user to allow it use EC2 Spot Fleet and Auto Scaling Group
 [AWS documentation about that](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites)
 
 ```json
@@ -75,7 +77,8 @@ Add inline policy to the user to allow it use EC2 Spot Fleet
           {
               "Effect": "Allow",
               "Action": [
-                  "ec2:*"
+                  "ec2:*",
+                  "autoscaling:*"
               ],
               "Resource": "*"
           },
@@ -92,13 +95,19 @@ Add inline policy to the user to allow it use EC2 Spot Fleet
   }
 ```
 
-#### 4. Create EC2 Spot Fleet
+#### 4. Create EC2 Fleet
+
+*Create EC2 Spot Fleet*
 
 https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet
 
 Make sure that you:
 - Checked ```Maintain target capacity``` [why](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type)
 - specify an SSH key that will be used later by Jenkins.
+
+*Alternative Create Auto Scaling Group*
+
+https://docs.aws.amazon.com/autoscaling/ec2/userguide/GettingStartedTutorial.html
 
 #### 5. Configure Jenkins
 
@@ -107,8 +116,8 @@ Once the fleet is launched, you can set it up by adding a new **EC2 Fleet** clou
 1. Goto ```Manage Jenkins > Plugin Manager``` 
 1. Install ```EC2 Fleet Jenkins Plugin```
 1. Goto ```Manage Jenkins > Configure System```
-1. Click ```Add a new cloud``` and select ```Amazon SpotFleet```
-1. Configure credentials and specify EC2 Spot Fleet which you want to use
+1. Click ```Add a new cloud``` and select ```Amazon EC2 Fleet```
+1. Configure credentials and specify EC2 Spot Fleet or Auto Scaling Group which you want to use
 
 ## Scaling
 You can specify the scaling limits in your cloud settings. By default, Jenkins will try to scale fleet up
@@ -137,7 +146,9 @@ import jenkins.model.Jenkins
 // just modify this config other code just logic
 config = [
     region: "us-east-1",
-    fleetId: "...",
+    // EC2 Spot Fleet ID
+    // or Auto Scaling Group Name
+    fleetId: "...", 
     idleMinutes: 10,
     minSize: 0,
     maxSize: 10,
@@ -265,9 +276,21 @@ https://issues.jenkins-ci.org/browse/JENKINS-53954
 
 ### Install Java 8 on EC2 instance 
 
+Regular script:
+
 ```bash
-sudo yum install java-1.8.0
-sudo yum remove java-1.7.0-openjdk
+sudo yum install java-1.8.0 -y
+sudo yum remove java-1.7.0-openjdk -y
 java -version 
+```
+
+User Data Script:
+
+*Note* ```sudo``` is not required ```-y``` to suppress confirmation.
+Don't forget to encode with Base64
+
+```bash
+#!/bin/bash
+yum install java-1.8.0 -y && yum remove java-1.7.0-openjdk -y && java -version
 ```
 

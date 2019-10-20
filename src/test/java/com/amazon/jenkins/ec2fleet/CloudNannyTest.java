@@ -50,10 +50,10 @@ public class CloudNannyTest {
     private List<Cloud> clouds = new ArrayList<>();
 
     private FleetStateStats stats1 = new FleetStateStats(
-            "f1", 1, "a", ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f1", 1, new FleetStateStats.State(true, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
 
     private FleetStateStats stats2 = new FleetStateStats(
-            "f2", 1, "a", ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f2", 1, new FleetStateStats.State(true, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
 
     private int recurrencePeriod = 45;
 
@@ -99,12 +99,12 @@ public class CloudNannyTest {
     }
 
     @Test
-    public void shouldDoNothingIfNoCloudsAndWidgets() throws Exception {
+    public void shouldDoNothingIfNoCloudsAndWidgets() {
         getMockCloudNannyInstance().doRun();
     }
 
     @Test
-    public void shouldUpdateCloudAndDoNothingIfNoWidgets() throws Exception {
+    public void shouldUpdateCloudAndDoNothingIfNoWidgets() {
         clouds.add(cloud1);
         clouds.add(cloud2);
 
@@ -112,7 +112,7 @@ public class CloudNannyTest {
     }
 
     @Test
-    public void shouldUpdateCloudCollectResultAndUpdateWidgets() throws Exception {
+    public void shouldUpdateCloudCollectResultAndUpdateWidgets() {
         clouds.add(cloud1);
 
         widgets.add(widget1);
@@ -120,11 +120,11 @@ public class CloudNannyTest {
         getMockCloudNannyInstance().doRun();
 
         verify(widget1).setStatusList(ImmutableList.of(new EC2FleetStatusInfo(
-                cloud1.getFleet(), stats1.getState(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
+                cloud1.getFleet(), stats1.getState().getDetailed(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
     }
 
     @Test
-    public void shouldUpdateCloudCollectResultAndUpdateAllEC2FleetWidgets() throws Exception {
+    public void shouldUpdateCloudCollectResultAndUpdateAllEC2FleetWidgets() {
         clouds.add(cloud1);
 
         widgets.add(widget1);
@@ -133,13 +133,13 @@ public class CloudNannyTest {
         getMockCloudNannyInstance().doRun();
 
         verify(widget1).setStatusList(ImmutableList.of(new EC2FleetStatusInfo(
-                cloud1.getFleet(), stats1.getState(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
+                cloud1.getFleet(), stats1.getState().getDetailed(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
         verify(widget2).setStatusList(ImmutableList.of(new EC2FleetStatusInfo(
-                cloud1.getFleet(), stats1.getState(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
+                cloud1.getFleet(), stats1.getState().getDetailed(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired())));
     }
 
     @Test
-    public void shouldIgnoreNonEC2FleetClouds() throws Exception {
+    public void shouldIgnoreNonEC2FleetClouds() {
         clouds.add(cloud1);
 
         Cloud nonEc2FleetCloud = mock(Cloud.class);
@@ -154,7 +154,7 @@ public class CloudNannyTest {
     }
 
     @Test
-    public void shouldUpdateCloudCollectAllResultAndUpdateWidgets() throws Exception {
+    public void shouldUpdateCloudCollectAllResultAndUpdateWidgets() {
         clouds.add(cloud1);
         clouds.add(cloud2);
 
@@ -163,13 +163,13 @@ public class CloudNannyTest {
         getMockCloudNannyInstance().doRun();
 
         verify(widget1).setStatusList(ImmutableList.of(
-                new EC2FleetStatusInfo(cloud1.getFleet(), stats1.getState(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired()),
-                new EC2FleetStatusInfo(cloud2.getFleet(), stats2.getState(), cloud2.getLabelString(), stats2.getNumActive(), stats2.getNumDesired())
+                new EC2FleetStatusInfo(cloud1.getFleet(), stats1.getState().getDetailed(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired()),
+                new EC2FleetStatusInfo(cloud2.getFleet(), stats2.getState().getDetailed(), cloud2.getLabelString(), stats2.getNumActive(), stats2.getNumDesired())
         ));
     }
 
     @Test
-    public void shouldIgnoreExceptionsFromUpdateForOneofCloudAndUpdateOther() throws Exception {
+    public void shouldIgnoreExceptionsFromUpdateForOneofCloudAndUpdateOther() {
         clouds.add(cloud1);
         clouds.add(cloud2);
 
@@ -180,13 +180,13 @@ public class CloudNannyTest {
         getMockCloudNannyInstance().doRun();
 
         verify(widget1).setStatusList(ImmutableList.of(
-                new EC2FleetStatusInfo(cloud2.getFleet(), stats2.getState(), cloud2.getLabelString(), stats2.getNumActive(), stats2.getNumDesired())
+                new EC2FleetStatusInfo(cloud2.getFleet(), stats2.getState().getDetailed(), cloud2.getLabelString(), stats2.getNumActive(), stats2.getNumDesired())
         ));
     }
 
     @SuppressWarnings("unchecked")
     @Test
-    public void shouldIgnoreNonEc2FleetWidgets() throws Exception {
+    public void shouldIgnoreNonEc2FleetWidgets() {
         clouds.add(cloud1);
 
         Widget nonEc2FleetWidget = mock(Widget.class);
@@ -201,7 +201,7 @@ public class CloudNannyTest {
     }
 
     @Test
-    public void resetCloudInterval() throws Exception {
+    public void resetCloudInterval() {
         clouds.add(cloud1);
         clouds.add(cloud2);
         CloudNanny cloudNanny = getMockCloudNannyInstance();
@@ -219,7 +219,8 @@ public class CloudNannyTest {
     }
 
     @Test
-    public void skipCloudIntervalExecution() throws Exception {
+    public void skipCloudIntervalExecution() {
+        widgets.add(widget1);
         clouds.add(cloud1);
         clouds.add(cloud2);
         CloudNanny cloudNanny = getMockCloudNannyInstance();
@@ -234,10 +235,13 @@ public class CloudNannyTest {
 
         assertEquals(1, recurrenceCounter1.get());
         assertEquals(2, recurrenceCounter2.get());
+
+        // commented because of bug https://github.com/jenkinsci/ec2-fleet-plugin/issues/147
+        // verifyZeroInteractions(widget1, widget2);
     }
 
     @Test
-    public void updateOnlyOneCloud() throws Exception {
+    public void updateOnlyOneCloud() {
         clouds.add(cloud1);
         clouds.add(cloud2);
         CloudNanny cloudNanny = getMockCloudNannyInstance();

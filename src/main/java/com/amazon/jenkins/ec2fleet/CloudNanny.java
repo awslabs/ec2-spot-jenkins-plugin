@@ -49,7 +49,7 @@ public class CloudNanny extends PeriodicWork {
             if (!(cloud instanceof EC2FleetCloud)) continue;
             final EC2FleetCloud fleetCloud = (EC2FleetCloud) cloud;
 
-            AtomicInteger recurrenceCounter = getRecurrenceCounter(fleetCloud);
+            final AtomicInteger recurrenceCounter = getRecurrenceCounter(fleetCloud);
 
             if (recurrenceCounter.decrementAndGet() > 0) {
                 continue;
@@ -61,7 +61,7 @@ public class CloudNanny extends PeriodicWork {
                 // Update the cluster states
                 final FleetStateStats stats = fleetCloud.update();
                 info.add(new EC2FleetStatusInfo(
-                        fleetCloud.getFleet(), stats.getState(), fleetCloud.getLabelString(),
+                        fleetCloud.getFleet(), stats.getState().getDetailed(), fleetCloud.getLabelString(),
                         stats.getNumActive(), stats.getNumDesired()));
             } catch (Exception e) {
                 // could bad configuration or real exception, we can't do too much here

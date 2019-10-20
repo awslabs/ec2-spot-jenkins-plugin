@@ -121,8 +121,8 @@ public class EC2Api {
     /**
      * Auto handle instance not found exception if any and assume those instances as already terminated
      *
-     * @param ec2
-     * @param instanceIds
+     * @param ec2 ec2 client
+     * @param instanceIds set of instance ids
      */
     public void terminateInstances(final AmazonEC2 ec2, final Set<String> instanceIds) {
         final List<String> temp = new ArrayList<>(instanceIds);

@@ -1,5 +1,7 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
+import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.ActiveInstance;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
@@ -15,11 +17,8 @@ import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.google.common.collect.ImmutableSet;
-import hudson.model.Computer;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Label;
-import hudson.model.Node;
-import hudson.model.Result;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.ComputerConnector;
@@ -35,7 +34,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -63,30 +61,25 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 0, 1, false, false,
+                0, 0, 0, 1, true, false,
                 false, 0, 0, false,
                 2, false);
         j.jenkins.clouds.add(cloud);
 
-        EC2Api ec2Api = spy(EC2Api.class);
+        final EC2Api ec2Api = spy(EC2Api.class);
         Registry.setEc2Api(ec2Api);
+
+        final EC2Fleet ec2Fleet = mock(EC2Fleet.class);
+        EC2Fleets.setGet(ec2Fleet);
+
+        when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
+                new FleetStateStats("", 0, FleetStateStats.State.active(), ImmutableSet.<String>of(),
+                        Collections.<String, Double>emptyMap()));
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
         when(ec2Api.connect(anyString(), anyString(), Mockito.nullable(String.class))).thenReturn(amazonEC2);
 
-        when(amazonEC2.describeSpotFleetInstances(any(DescribeSpotFleetInstancesRequest.class)))
-                .thenReturn(new DescribeSpotFleetInstancesResult());
-
-        DescribeSpotFleetRequestsResult describeSpotFleetRequestsResult = new DescribeSpotFleetRequestsResult();
-        describeSpotFleetRequestsResult.setSpotFleetRequestConfigs(Arrays.asList(
-                new SpotFleetRequestConfig()
-                        .withSpotFleetRequestState("active")
-                        .withSpotFleetRequestConfig(
-                                new SpotFleetRequestConfigData().withTargetCapacity(0))));
-        when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
-                .thenReturn(describeSpotFleetRequestsResult);
-
-        List<QueueTaskFuture> rs = getQueueTaskFutures(5);
+        List<QueueTaskFuture> rs = enqueTask(5);
 
         Assert.assertEquals(0, j.jenkins.getNodes().size());
 
@@ -105,16 +98,16 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         ComputerConnector computerConnector = mock(ComputerConnector.class);
         when(computerConnector.launch(anyString(), any(TaskListener.class))).thenReturn(computerLauncher);
 
-        mockEc2ApiToDescribeFleetNotInstanceWhenModified();
+        mockEc2FleetApi();
 
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, true, false,
                 false, 0, 0, false,
                 2, false);
         j.jenkins.clouds.add(cloud);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture> rs = enqueTask(1);
 
         triggerSuggestReviewNow("momo");
 
@@ -140,19 +133,19 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, true, false,
                 false, 300, 15, false,
                 2, false));
 
         // provide init state
-        cloud.setStats(new FleetStateStats("", 0, "active",
+        cloud.setStats(new FleetStateStats("", 0, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         j.jenkins.clouds.add(cloud);
 
-        mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
+        mockEc2FleetApiToEc2SpotFleet(InstanceStateName.Running);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture> rs = enqueTask(1);
 
         final String labelString = "momo";
         triggerSuggestReviewNow(labelString);
@@ -172,14 +165,14 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, true, false,
                 false, 0, 0, false,
                 10, false));
         j.jenkins.clouds.add(cloud);
 
-        mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running);
+        mockEc2FleetApiToEc2SpotFleet(InstanceStateName.Running);
 
-        getQueueTaskFutures(1);
+        enqueTask(1);
 
         tryUntil(new Runnable() {
             @Override
@@ -198,11 +191,11 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
-                0, 0, 10, 1, false, false,
+                0, 0, 10, 1, true, false,
                 false, 0, 0, false,
                 10, false));
 
-        cloud.setStats(new FleetStateStats("", 0, "active",
+        cloud.setStats(new FleetStateStats("", 0, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         j.jenkins.clouds.add(cloud);
@@ -234,7 +227,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(amazonEC2.describeSpotFleetRequests(any(DescribeSpotFleetRequestsRequest.class)))
                 .thenReturn(describeSpotFleetRequestsResult);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        List<QueueTaskFuture> rs = enqueTask(1);
 
         j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
 
@@ -260,9 +253,9 @@ public class ProvisionIntegrationTest extends IntegrationTest {
                 2, false);
         j.jenkins.clouds.add(cloud);
 
-        mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Pending);
+        mockEc2FleetApiToEc2SpotFleet(InstanceStateName.Pending);
 
-        List<QueueTaskFuture> rs = getQueueTaskFutures(1);
+        final List<QueueTaskFuture> rs = enqueTask(1);
 
         triggerSuggestReviewNow("momo");
 
@@ -282,7 +275,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
     @Test
     public void should_continue_update_after_termination() throws IOException {
-        mockEc2ApiToDescribeInstancesWhenModified(InstanceStateName.Running, 5);
+        mockEc2FleetApiToEc2SpotFleet(InstanceStateName.Running, 5);
 
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
@@ -292,30 +285,14 @@ public class ProvisionIntegrationTest extends IntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        // wait while all nodes will be ok
-//        tryUntil(new Runnable() {
-//            @Override
-//            public void run() {
-//                for (Node node : j.jenkins.getNodes()) {
-//                    final Computer computer = node.toComputer();
-//                    Assert.assertNotNull(computer);
-//                    Assert.assertTrue(computer.isOnline());
-//                }
-//            }
-//        });
+        waitFirstStats(cloud);
 
-        final List<QueueTaskFuture<FreeStyleBuild>> tasks = new ArrayList<>();
-        tasks.addAll((List) getQueueTaskFutures(5));
+        final List<QueueTaskFuture> tasks = new ArrayList<>(enqueTask(5));
+        j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
         System.out.println("tasks submitted");
 
         // wait full execution
-        for (final QueueTaskFuture<FreeStyleBuild> task : tasks) {
-            try {
-                Assert.assertEquals(task.get().getResult(), Result.SUCCESS);
-            } catch (InterruptedException | ExecutionException e) {
-                throw new RuntimeException(e);
-            }
-        }
+        waitJobSuccessfulExecution(tasks);
 
         // wait until downscale happens
         tryUntil(new Runnable() {
