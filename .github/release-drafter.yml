@@ -1,3 +1,4 @@
 # https://github.com/jenkinsci/.github/blob/master/.github/release-drafter.adoc
 _extends: .github
+name-template: ec2-fleet-$NEXT_MINOR_VERSION
 tag-template: ec2-fleet-$NEXT_MINOR_VERSION
