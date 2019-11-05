@@ -1,5 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.google.common.util.concurrent.SettableFuture;
 import hudson.model.Label;
 import hudson.model.LoadStatistics;
 import hudson.slaves.Cloud;
@@ -158,8 +159,8 @@ public class NoDelayProvisionStrategyTest {
         when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud2.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(
-                mock(NodeProvisioner.PlannedNode.class),
-                mock(NodeProvisioner.PlannedNode.class)
+                new NodeProvisioner.PlannedNode("", SettableFuture.create(), 1),
+                new NodeProvisioner.PlannedNode("", SettableFuture.create(), 1)
         ));
 
         Assert.assertEquals(
@@ -183,8 +184,8 @@ public class NoDelayProvisionStrategyTest {
         when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud2.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(
-                mock(NodeProvisioner.PlannedNode.class),
-                mock(NodeProvisioner.PlannedNode.class)
+                new NodeProvisioner.PlannedNode("", SettableFuture.create(), 1),
+                new NodeProvisioner.PlannedNode("", SettableFuture.create(), 1)
         ));
 
         Assert.assertEquals(
@@ -192,6 +193,24 @@ public class NoDelayProvisionStrategyTest {
                 strategy.apply(state));
         verify(ec2FleetCloud1, times(1)).provision(label, 5);
         verify(ec2FleetCloud2, times(1)).provision(label, 3);
+    }
+
+    @Test
+    public void givenEC2Clouds_shouldReduceAsAmountOfExecutors() {
+        when(snapshot.getQueueLength()).thenReturn(2);
+        when(state.getLabel()).thenReturn(label);
+
+        final EC2FleetCloud ec2FleetCloud1 = mock(EC2FleetCloud.class);
+        clouds.add(ec2FleetCloud1);
+        when(ec2FleetCloud1.canProvision(any(Label.class))).thenReturn(true);
+        when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
+        final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode("", SettableFuture.create(), 2);
+        when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(plannedNode));
+        // then
+        final NodeProvisioner.StrategyDecision decision = strategy.apply(state);
+        // when
+        Assert.assertEquals(NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED, decision);
+        verify(ec2FleetCloud1, times(1)).provision(label, 2);
     }
 
 }

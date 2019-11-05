@@ -39,8 +39,11 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
                         + strategyState.getAdditionalPlannedCapacity();  // capacity added by previous strategies _this round_
 
         int currentDemand = snapshot.getQueueLength() - availableCapacity;
-        LOGGER.log(Level.INFO, "Available capacity={0}, currentDemand={1}",
-                new Object[]{availableCapacity, currentDemand});
+        LOGGER.log(Level.INFO,
+                "currentDemand {0} availableCapacity {1} (availableExecutors {2} connectingExecutors {3} plannedCapacitySnapshot {4} additionalPlannedCapacity {5})",
+                new Object[]{currentDemand, availableCapacity, snapshot.getAvailableExecutors(),
+                        snapshot.getConnectingExecutors(), strategyState.getPlannedCapacitySnapshot(),
+                        strategyState.getAdditionalPlannedCapacity()});
 
         for (final Cloud cloud : getClouds()) {
             if (currentDemand < 1) break;
@@ -52,11 +55,12 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
             if (!ec2.isNoDelayProvision()) continue;
 
             final Collection<NodeProvisioner.PlannedNode> plannedNodes = cloud.provision(label, currentDemand);
-            currentDemand -= plannedNodes.size();
+            for (NodeProvisioner.PlannedNode plannedNode : plannedNodes) {
+                currentDemand -= plannedNode.numExecutors;
+            }
             LOGGER.log(Level.FINE, "Planned {0} new nodes", plannedNodes.size());
             strategyState.recordPendingLaunches(plannedNodes);
-            LOGGER.log(Level.FINE, "After provisioning, available capacity={0}, currentDemand={1}",
-                    new Object[]{availableCapacity, currentDemand});
+            LOGGER.log(Level.FINE, "After provisioning currentDemand={0}", new Object[]{currentDemand});
         }
 
         if (currentDemand < 1) {
