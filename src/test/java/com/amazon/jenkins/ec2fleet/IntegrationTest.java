@@ -48,6 +48,7 @@ import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -236,6 +237,12 @@ public abstract class IntegrationTest {
         return r;
     }
 
+    protected static Set<String> nodeToNames(Collection<Node> nodes) {
+        Set<String> r = new HashSet<>();
+        for (Node l : nodes) r.add(l.getNodeName());
+        return r;
+    }
+
     protected static void waitJobSuccessfulExecution(final List<QueueTaskFuture> tasks) {
         for (final QueueTaskFuture task : tasks) {
             try {
@@ -401,7 +408,7 @@ public abstract class IntegrationTest {
                 }
 
                 return new FleetStateStats("", 0,
-                        new FleetStateStats.State(true, "active"),
+                        new FleetStateStats.State(true, false, "active"),
                         instanceIds, Collections.<String, Double>emptyMap());
             }
         });
