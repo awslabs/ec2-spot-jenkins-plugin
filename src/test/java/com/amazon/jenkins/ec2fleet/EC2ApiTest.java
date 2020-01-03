@@ -76,6 +76,27 @@ public class EC2ApiTest {
     }
 
     @Test
+    public void describeInstances_shouldThrowExceptionIfNotInstanceNotFound() {
+        // given
+        Set<String> instanceIds = new HashSet<>();
+        instanceIds.add("i-1");
+
+        final AmazonEC2Exception exception = new AmazonEC2Exception("NOT INSTANCE NOT FOUND");
+        exception.setErrorCode("NOT INSTANCE_NOT_FOUND_ERROR_CODE");
+        when(amazonEC2.describeInstances(any(DescribeInstancesRequest.class)))
+                .thenThrow(exception);
+
+        // when
+        try {
+            new EC2Api().describeInstances(amazonEC2, instanceIds);
+            Assert.fail();
+        } catch (AmazonEC2Exception e) {
+            Assert.assertEquals("NOT INSTANCE NOT FOUND", e.getErrorMessage());
+            Assert.assertEquals(AmazonEC2Exception.class, e.getClass());
+        }
+    }
+
+    @Test
     public void describeInstances_shouldProcessAllPagesUntilNextTokenIsAvailable() {
         // given
         Set<String> instanceIds = new HashSet<>();

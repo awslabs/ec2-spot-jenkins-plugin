@@ -115,6 +115,8 @@ public class EC2Api {
                         throw exception;
                     }
                     copy.removeAll(notFoundInstanceIds);
+                } else {
+                    throw exception;
                 }
             }
         }
