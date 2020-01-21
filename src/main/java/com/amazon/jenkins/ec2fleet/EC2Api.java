@@ -162,7 +162,7 @@ public class EC2Api {
     }
 
     public AmazonEC2 connect(final String awsCredentialsId, final String regionName, final String endpoint) {
-        final ClientConfiguration clientConfiguration = AWSUtils.getClientConfiguration();
+        final ClientConfiguration clientConfiguration = AWSUtils.getClientConfiguration(endpoint);
         final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(awsCredentialsId, Jenkins.getInstance());
         final AmazonEC2Client client =
                 credentials != null ?

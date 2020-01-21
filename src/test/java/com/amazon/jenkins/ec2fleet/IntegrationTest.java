@@ -88,7 +88,6 @@ public abstract class IntegrationTest {
 
     protected static final long JOB_SLEEP_TIME = 30;
 
-
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
 
