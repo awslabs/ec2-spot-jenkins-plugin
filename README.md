@@ -20,6 +20,7 @@ automatically scaling the capacity with the load.
   * [Groovy](#groovy)
   * [Preconfigure Slave](#preconfigure-slave)
   * [Label Based Configuration (beta)](docs/LABEL-BASED-CONFIGURATION.md)
+  * [Windows Slave](docs/SETUP-WINDOWS-SLAVE.md)
 * [Development](#development)
 
 # Overview
