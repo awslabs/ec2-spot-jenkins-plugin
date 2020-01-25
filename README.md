@@ -2,6 +2,7 @@
 
 [![Build Status](https://ci.jenkins.io/buildStatus/icon?job=Plugins/ec2-fleet-plugin/master)](https://ci.jenkins.io/blue/organizations/jenkins/Plugins%2Fec2-fleet-plugin/activity) [![](https://img.shields.io/jenkins/plugin/v/ec2-fleet.svg)](https://github.com/jenkinsci/ec2-fleet-plugin/releases)
 [![Gitter](https://badges.gitter.im/ec2-fleet-plugin/community.svg)](https://gitter.im/ec2-fleet-plugin/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/ec2-fleet.svg?color=blue)](https://plugins.jenkins.io/ec2-fleet)
 
 Use this one instead of [Original repo in awslabs](https://github.com/awslabs/ec2-spot-jenkins-plugin)
 
