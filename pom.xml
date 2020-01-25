@@ -21,7 +21,7 @@
 
   <name>EC2 Fleet Jenkins Plugin</name>
   <description>Support EC2 SpotFleet for Jenkins</description>
-  <url>https://wiki.jenkins.io/display/JENKINS/Amazon+EC2+Fleet+Plugin</url>
+  <url>https://github.com/jenkinsci/ec2-fleet-plugin</url>
   <licenses>
     <license>
       <name>MIT License</name>
