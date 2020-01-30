@@ -114,9 +114,9 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     private final boolean alwaysReconnect;
     private final String labelString;
     private final Integer idleMinutes;
-    private final Integer minSize;
-    private final Integer maxSize;
-    private final Integer numExecutors;
+    private final int minSize;
+    private final int maxSize;
+    private final int numExecutors;
     private final boolean addNodeOnlyIfRunning;
     private final boolean restrictUsage;
     private final boolean scaleExecutorsByWeight;
@@ -166,9 +166,9 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                          final boolean privateIpUsed,
                          final boolean alwaysReconnect,
                          final Integer idleMinutes,
-                         final Integer minSize,
-                         final Integer maxSize,
-                         final Integer numExecutors,
+                         final int minSize,
+                         final int maxSize,
+                         final int numExecutors,
                          final boolean addNodeOnlyIfRunning,
                          final boolean restrictUsage,
                          final boolean disableTaskResubmit,
@@ -192,7 +192,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         this.alwaysReconnect = alwaysReconnect;
         this.minSize = minSize;
         this.maxSize = maxSize;
-        this.numExecutors = numExecutors;
+        this.numExecutors = Math.max(numExecutors, 1);
         this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
         this.scaleExecutorsByWeight = scaleExecutorsByWeight;
@@ -289,15 +289,15 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         return (idleMinutes != null) ? idleMinutes : 0;
     }
 
-    public Integer getMaxSize() {
+    public int getMaxSize() {
         return maxSize;
     }
 
-    public Integer getMinSize() {
+    public int getMinSize() {
         return minSize;
     }
 
-    public Integer getNumExecutors() {
+    public int getNumExecutors() {
         return numExecutors;
     }
 
@@ -414,8 +414,8 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             info("Fleet under modification, try update later, %s", currentState.getState().getDetailed());
             synchronized (this) {
                 stats = currentState;
+                return stats;
             }
-            return stats;
         }
 
         // fleet could be updated outside of plugin, we should be ready that
@@ -445,9 +445,8 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                 // cancel to let jenkins no that node is not valid any more
                 plannedNodeToCancel.future.cancel(true);
             }
+            return stats;
         }
-
-        return stats;
     }
 
     private void updateByState(
@@ -737,13 +736,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     @SuppressWarnings("unused")
     public static class DescriptorImpl extends Descriptor<Cloud> {
 
-        public String accessId;
-        public String secretKey;
-        public String region;
-        public String privateKey;
-        public String fleet;
-        public boolean showAllFleets;
-
         public DescriptorImpl() {
             super();
             load();
@@ -826,26 +818,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             req.bindJSON(this, formData);
             save();
             return super.configure(req, formData);
-        }
-
-        public boolean isShowAllFleets() {
-            return showAllFleets;
-        }
-
-        public String getAccessId() {
-            return accessId;
-        }
-
-        public String getSecretKey() {
-            return secretKey;
-        }
-
-        public String getRegion() {
-            return region;
-        }
-
-        public String getFleet() {
-            return fleet;
         }
 
     }
