@@ -28,10 +28,10 @@
       <f:textbox default=""/>
     </f:entry>
 
-<!--    <f:description>EC2 SSH Key Name</f:description>-->
-<!--    <f:entry title="${%EC2 Key Name}" field="ec2KeyPairName">-->
-<!--        <f:select/>-->
-<!--    </f:entry>-->
+    <f:description>EC2 SSH Key Name</f:description>
+    <f:entry title="${%EC2 Key Name}" field="ec2KeyPairName">
+        <f:select/>
+    </f:entry>
 
     <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="awsCredentialsId,region,fleet" />
 

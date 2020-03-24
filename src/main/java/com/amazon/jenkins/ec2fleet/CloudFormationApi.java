@@ -71,7 +71,7 @@ public class CloudFormationApi {
             final int maxSize = parameters.getIntOrDefault("maxSize", 10);
             final int minSize = parameters.getIntOrDefault("minSize", 0);
             final String instanceType = parameters.getOrDefault("instanceType", "m4.large");
-            final String spotPrice = parameters.get("spotPrice"); // "0.04"
+            final String spotPrice = parameters.getOrDefault("spotPrice", ""); // "0.04"
 
             final String template = "/com/amazon/jenkins/ec2fleet/" + (type.equals("asg") ? "auto-scaling-group.yml" : "ec2-spot-fleet.yml");
             client.createStack(
