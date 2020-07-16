@@ -4,7 +4,7 @@
 [![Gitter](https://badges.gitter.im/ec2-fleet-plugin/community.svg)](https://gitter.im/ec2-fleet-plugin/community?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 [![Jenkins Plugin Installs](https://img.shields.io/jenkins/plugin/i/ec2-fleet.svg?color=blue)](https://plugins.jenkins.io/ec2-fleet)
 
-Use this one instead of [Original repo in awslabs](https://github.com/awslabs/ec2-spot-jenkins-plugin)
+Use [jenkinsci/ec2-fleet-plugin](https://github.com/jenkinsci/ec2-fleet-plugin) instead of [awslabs/ec2-spot-jenkins-plugin](https://github.com/awslabs/ec2-spot-jenkins-plugin)
 
 
 The EC2 Spot Jenkins plugin launches EC2 Spot instances as worker nodes for Jenkins CI server, 
@@ -27,7 +27,7 @@ automatically scaling the capacity with the load.
 
 # Overview
 
-This plugin uses EC2 Spot Fleet or [Auto Scaling Group](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroup.html) to launch instances instead of directly launching them by itself. 
+This plugin uses [EC2 Spot Fleet](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html) or [Auto Scaling Group](https://docs.aws.amazon.com/autoscaling/ec2/userguide/AutoScalingGroup.html) to launch instances instead of directly launching them by itself. 
 Both maintain your fleet's target capacity as Spot prices change to maintain
 the fleet within the specified price range. For more information, see 
 [How Spot Fleet Works](http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html).
@@ -53,17 +53,17 @@ minor = increase when new features
 bugfix = increase when bug fixes
 ```
 
-As result you safe to update plugin to any version until first number is the same with what you have.
+As result, you can safely update the plugin to any version until the first number is the same with what you have.
 
-https://github.com/jenkinsci/ec2-fleet-plugin/releases
+Releases: https://github.com/jenkinsci/ec2-fleet-plugin/releases
 
 # Usage
 
 ## Setup
 
-#### 1. Get AWS Account
+#### 1. Create AWS Account
 
-[AWS account](http://aws.amazon.com/ec2/)
+Go to [AWS account](http://aws.amazon.com/ec2/) and follow instructions
 
 #### 2. Create IAM User
 
@@ -100,7 +100,7 @@ Add inline policy to the user to allow it use EC2 Spot Fleet and Auto Scaling Gr
   }
 ```
 
-#### 4. Create EC2 Fleet
+#### 4. Create EC2 Fleet / Auto-Scaling Group
 
 *Create EC2 Spot Fleet*
 
@@ -110,7 +110,7 @@ Make sure that you:
 - Checked ```Maintain target capacity``` [why](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type)
 - specify an SSH key that will be used later by Jenkins.
 
-*Alternative Create Auto Scaling Group*
+*Alternatively, create Auto Scaling Group*
 
 https://docs.aws.amazon.com/autoscaling/ec2/userguide/GettingStartedTutorial.html
 
