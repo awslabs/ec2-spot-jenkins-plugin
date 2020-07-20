@@ -761,10 +761,11 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
          * Fill Regions
          *
          * Get region codes (e.g. us-east-1) from EC2 API and AWS SDK.
-         * However, API does not have region descriptions (such as us-east-1 -> US East (N. Virginia))
-         * We fetch descriptions from our <code>RegionInfo</code> enum to avoid unnecessarily upgrading AWS Java SDK for newer regions and fallback to AWS Java SDK enum.
+         * However, API does not have region descriptions (such as us-east-1 - US East (N. Virginia))
+         * We fetch descriptions from our <code>RegionInfo</code> enum to avoid unnecessarily upgrading
+         * AWS Java SDK for newer regions and fallback to AWS Java SDK enum.
          *
-         * @param awsCredentialsId
+         * @param awsCredentialsId aws credentials id
          * @return <code>ListBoxModel</code> with label and values
          */
         @SuppressFBWarnings(
