@@ -88,7 +88,8 @@ Add inline policy to the user or instance role to allow it use EC2 Spot Fleet an
             "ec2:ModifySpotFleetRequest",
             "ec2:CreateTags",
             "ec2:DescribeRegions",
-            "ec2:iDescribeInstances",
+            "ec2:DescribeInstances",
+            "ec2:TerminateInstances",
             "ec2:DescribeInstanceStatus",
             "ec2:DescribeSpotFleetRequests"
          ],
