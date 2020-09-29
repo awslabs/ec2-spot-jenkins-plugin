@@ -10,7 +10,6 @@ import hudson.model.TaskListener;
 import hudson.model.queue.SubTask;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.DelegatingComputerLauncher;
-import hudson.slaves.OfflineCause;
 import hudson.slaves.SlaveComputer;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -61,14 +60,8 @@ public class EC2FleetAutoResubmitComputerLauncher extends DelegatingComputerLaun
      * There is no official recommendation about way how to resubmit job according to
      * https://issues.jenkins-ci.org/browse/JENKINS-49707 moreover some of Jenkins code says it impossible.
      * <p>
-     * method checks {@link SlaveComputer#getOfflineCause()} for disconnect because of EC2 instance termination
-     * it returns
-     * <code>
-     * result = {OfflineCause$ChannelTermination@13708} "Connection was broken: java.io.IOException:
-     * Unexpected termination of the channel\n\tat hudson.remoting.SynchronousCommandTransport$ReaderThread...
-     * cause = {IOException@13721} "java.io.IOException: Unexpected termination of the channel"
-     * timestamp = 1561067177837
-     * </code>
+     * We resubmit any active executables that were being processed by the disconnected node, regardless of
+     * why the node disconnected.
      *
      * @param computer computer
      * @param listener listener
@@ -89,40 +82,32 @@ public class EC2FleetAutoResubmitComputerLauncher extends DelegatingComputerLaun
             return;
         }
 
-        final boolean unexpectedDisconnect = computer.isOffline() && computer.getOfflineCause() instanceof OfflineCause.ChannelTermination;
-        if (!cloud.isDisableTaskResubmit() && unexpectedDisconnect) {
+        LOGGER.log(LOG_LEVEL, "DISCONNECTED: " + computer.getDisplayName());
+
+        if (!cloud.isDisableTaskResubmit() && computer.isOffline()) {
             final List<Executor> executors = computer.getExecutors();
-            LOGGER.log(LOG_LEVEL, "Unexpected " + computer.getDisplayName()
-                    + " termination,  resubmit");
+            LOGGER.log(LOG_LEVEL, "Start retriggering executors for " + computer.getDisplayName());
 
             for (Executor executor : executors) {
-                if (executor.getCurrentExecutable() != null) {
+                final Queue.Executable executable = executor.getCurrentExecutable();
+                if (executable != null) {
                     executor.interrupt(Result.ABORTED, new EC2TerminationCause(computer.getDisplayName()));
 
-                    final Queue.Executable executable = executor.getCurrentExecutable();
-                    // if executor is not idle
-                    if (executable != null) {
-                        final SubTask subTask = executable.getParent();
-                        final Queue.Task task = subTask.getOwnerTask();
+                    final SubTask subTask = executable.getParent();
+                    final Queue.Task task = subTask.getOwnerTask();
 
-                        List<Action> actions = new ArrayList<>();
-                        if (executable instanceof Actionable) {
-                            actions = ((Actionable) executable).getActions();
-                        }
-
-                        Queue.getInstance().schedule2(task, RESCHEDULE_QUIET_PERIOD_SEC, actions);
-                        LOGGER.log(LOG_LEVEL, "Unexpected " + computer.getDisplayName()
-                                + " termination, resubmit " + task + " with actions " + actions);
+                    List<Action> actions = new ArrayList<>();
+                    if (executable instanceof Actionable) {
+                        actions = ((Actionable) executable).getActions();
                     }
+                    LOGGER.log(LOG_LEVEL, "RETRIGGERING: " + task + " - WITH ACTIONS: " + actions);
+                    Queue.getInstance().schedule2(task, RESCHEDULE_QUIET_PERIOD_SEC, actions);
                 }
             }
-            LOGGER.log(LOG_LEVEL, "Unexpected " + computer.getDisplayName()
-                    + " termination, resubmit finished");
+            LOGGER.log(LOG_LEVEL, "Finished retriggering executors for " + computer.getDisplayName());
         } else {
-            LOGGER.log(LOG_LEVEL, "Unexpected " + computer.getDisplayName()
-                    + " termination but resubmit disabled, no actions, disableTaskResubmit: "
-                    + cloud.isDisableTaskResubmit() + ", offline: " + computer.isOffline()
-                    + ", offlineCause: " + (computer.getOfflineCause() != null ? computer.getOfflineCause().getClass() : "null"));
+            LOGGER.log(LOG_LEVEL, "Skipping executable resubmission for " + computer.getDisplayName()
+                    + " - disableTaskResubmit: " + cloud.isDisableTaskResubmit() + " - offline: " + computer.isOffline());
         }
 
         // call parent
