@@ -36,11 +36,11 @@ the fleet within the specified price range. For more information, see
 
 - Support EC2 Spot Fleet or Auto Scaling Group as Jenkins Workers
 - Supports all features provided by EC2 Spot Fleet or Auto Scaling Groups
-- Auto resubmit Jobs failed because of Spot Interruption
-- Allow no delay scale up strategy, enable ```No Delay Provision Strategy``` in configuration
+- Auto resubmit failed jobs caused by Spot interruptions
+- No delay scale up strategy: enable ```No Delay Provision Strategy``` in configuration
 - Add tags to EC2 instances used by plugin, for easy search, tag format ```ec2-fleet-plugin:cloud-name=<MyCloud>```
 - Allow custom EC2 API endpoint
-- Auto Fleet creation based on Job label [see](docs/LABEL-BASED-CONFIGURATION.md)
+- Auto Fleet creation based on Job label ([details](docs/LABEL-BASED-CONFIGURATION.md))
 
 ## Comparison to EC2-Plugin
 
@@ -69,7 +69,7 @@ minor = increase when new features
 bugfix = increase when bug fixes
 ```
 
-As result, you can safely update the plugin to any version until the first number is the same with what you have.
+As a result, you can safely update the plugin to any version until the first number is different than what you have.
 
 Releases: https://github.com/jenkinsci/ec2-fleet-plugin/releases
 
@@ -79,19 +79,19 @@ Releases: https://github.com/jenkinsci/ec2-fleet-plugin/releases
 
 #### 1. Create AWS Account
 
-Go to [AWS account](http://aws.amazon.com/ec2/) and follow instructions
+Go to [AWS account](http://aws.amazon.com/ec2/) and follow instructions.
 
 #### 2. Create IAM User
 
-Specify ```programmatic access``` during creation, and record credentials
-which will be used by Jenkins EC2 Fleet Plugin to connect to your Spot Fleet.
+Specify ```programmatic access``` during creation and record the credentials. These will
+be used by Jenkins EC2 Fleet Plugin to connect to your Spot Fleet.
 
-*Alternatively, this may use [AWS EC2 instance roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html)*
+*Alternatively, you may use [AWS EC2 instance roles](https://docs.aws.amazon.com/IAM/latest/UserGuide/id_roles_use_switch-role-ec2.html)*
 
 #### 3. Configure User permissions
 
-Add inline policy to the user or instance role to allow it use EC2 Spot Fleet and Auto Scaling Group
-[AWS documentation about that](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites)
+Add an inline policy to the IAM user or EC2 instance role to allow it to use EC2 Spot Fleet and Auto Scaling Group.
+[AWS documentation about this](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#spot-fleet-prerequisites)
 
 ```json
 {
@@ -139,16 +139,16 @@ Add inline policy to the user or instance role to allow it use EC2 Spot Fleet an
 https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet-requests.html#create-spot-fleet
 
 Make sure that you:
-- Checked ```Maintain target capacity``` [why](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type)
-- specify an SSH key that will be used later by Jenkins.
+- Check ```Maintain target capacity``` [why](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type)
+- Specify an SSH key that will be used later by Jenkins.
 
-*Alternatively, create Auto Scaling Group*
+*Alternatively, create an Auto Scaling Group*
 
 https://docs.aws.amazon.com/autoscaling/ec2/userguide/GettingStartedTutorial.html
 
 #### 5. Configure Jenkins
 
-Once the fleet is launched, you can set it up by adding a new **EC2 Fleet** cloud in the Jenkins
+Once the Spot Fleet or ASG is ready, you can use it by adding a new **EC2 Fleet** cloud in the Jenkins configuration.
 
 1. Goto ```Manage Jenkins > Plugin Manager```
 1. Install ```EC2 Fleet Jenkins Plugin```
@@ -158,15 +158,15 @@ Once the fleet is launched, you can set it up by adding a new **EC2 Fleet** clou
 1. Specify EC2 Spot Fleet or Auto Scaling Group which you want to use
 
 ## Scaling
-You can specify the scaling limits in your cloud settings. By default, Jenkins will try to scale fleet up
+You can specify the scaling limits in your cloud settings. By default, Jenkins will try to scale the fleet up
 if there are enough tasks waiting in the build queue and scale down idle nodes after a specified idleness period.
 
 You can use the History tab in the AWS console to view the scaling history.
 
 ## Groovy
 
-Below Groovy script to setup EC2 Spot Fleet Plugin for Jenkins and configure it, you can
-run it by [Jenkins Script Console](https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console)
+Below is a Groovy script to setup EC2 Spot Fleet Plugin for Jenkins and configure it. You can
+run the script with [Jenkins Script Console](https://wiki.jenkins.io/display/JENKINS/Jenkins+Script+Console).
 
 ```groovy
 import com.amazonaws.services.ec2.model.InstanceType
@@ -258,47 +258,48 @@ jenkins.save()
 
 ## Preconfigure Slave
 
-Sometimes you need to prepare slave (which is EC2 instance) before Jenkins could use it.
-For example install some software which will be required by your builds like Maven etc.
+Sometimes you need to prepare a slave (an EC2 instance) before Jenkins can use it.
+For example, you need to install some software which is required by your builds like Maven, etc.
 
 For those cases you have a few options, described below:
 
 ### Amazon EC2 AMI
 
-**Greate for static preconfiguration**
-
 [AMI](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html) allows you to 
-create custom images for your EC2 instances. For example you can create image with
-Linux plus Java, Maven etc. as result when EC2 fleet will launch new EC2 instance with
-this AMI it will automatically get all required software. Nice =)
+create custom images for your EC2 instances. For example, you can create an image with
+Linux plus Java, Maven etc. Then, when EC2 Fleet launches new EC2 instances with
+this AMI they will automatically get all the required software. Nice =)
 
-1. Create custom AMI as described [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html#creating-an-ami)
+1. Create a custom AMI as described [here](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/AMIs.html#creating-an-ami)
 1. Create EC2 Spot Fleet with this AMI
 
-### EC2 instance User Data
+### EC2 Instance User Data
 
-EC2 instance allows to specify special script [User Data](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
-which will be executed when EC2 instance is created. That's allow you to do some customization
-for particular instance.
+EC2 instances allow you to specify a [User Data](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
+script that is executed when an instance first launches. This allows you to customize the setup for a particular instance.
 
-However, EC2 instance doesn't provide any information about User Data execution status,
-as result Jenkins could start task on new instances while User Data still in progress.
+#### SSH Prefix Verification
 
-To avoid that you can use Jenkins SSH Launcher ```Prefix Start Agent Command``` setting
-to specify command which should fail if User Data is not finished, in that way Jenkins will
-not be able to connect to instance until User Data is not done [more](https://github.com/jenkinsci/ssh-slaves-plugin/blob/master/doc/CONFIGURE.md)
+EC2 instances don't provide any information about the User Data script execution status,
+so Jenkins could start a task on a new instance while the script is still in progress. Most of the time Jenkins will
+repeatedly try to connect to the instance during this time and print out errors until the script completes and Jenkins
+can connect.
 
-1. Prepare [User Data script](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/user-data.html)
+To avoid those errors, you can use the Jenkins SSH Launcher ```Prefix Start Agent Command``` setting
+to specify a command which should fail if User Data is not finished. In that way Jenkins will
+not be able to connect to the instance until the User Data script is done. More information on configuring the SSH
+launcher can be found [here](https://github.com/jenkinsci/ssh-slaves-plugin/blob/master/doc/CONFIGURE.md).
+
 1. Open Jenkins
-1. Goto ```Manage Jenkins > Configure Jenkins```
-1. Find proper fleet configuration and click ```Advance``` for SSH Launcher
-1. Add checking command into field ```	Prefix Start Slave Command```
+1. Go to ```Manage Jenkins > Configure System```
+1. Find proper fleet configuration and click ```Advanced...``` for SSH Launcher
+1. Add checking command into field ```Prefix Start Slave Command```
    - example ```java -version && ```
-1. To apply for existent instances restart Jenkins or Delete Nodes from Jenkins so they will be reconnected 
+1. To apply for existing instances, restart Jenkins or Delete Nodes from Jenkins so they will be reconnected
 
 # Development
 
-Plugin usage statistic per Jenkins version [here](https://stats.jenkins.io/pluginversions/ec2-fleet.html)
+Plugin usage statistics per Jenkins version can be found [here](https://stats.jenkins.io/pluginversions/ec2-fleet.html)
 
 ## Releasing
 
@@ -324,7 +325,7 @@ java -version
 
 User Data Script:
 
-*Note* ```sudo``` is not required ```-y``` to suppress confirmation.
+*Note* ```sudo``` is not required, ```-y``` suppresses confirmation.
 Don't forget to encode with Base64
 
 ```bash
