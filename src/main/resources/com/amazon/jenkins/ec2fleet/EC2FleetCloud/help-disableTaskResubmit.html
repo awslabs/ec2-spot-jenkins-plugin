@@ -1,6 +1,7 @@
-If unchecked which is default, plugin will try to resubmit job if it was failed due to
-<a href="https://aws.amazon.com/ec2/spot/">EC2 Spot instance</a> interruption. If checked auto resubmit
-will be disabled.
+If unchecked, plugin will resubmit the job if it failed due an instance termination. For example, after an
+<a href="https://aws.amazon.com/ec2/spot/">EC2 Spot instance interruption</a>.
+
+If checked, auto resubmit will be disabled.
 
 <p>
     Interrupted job will be shown as failed or aborted see pipeline notes below.

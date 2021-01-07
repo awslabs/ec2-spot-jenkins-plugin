@@ -36,12 +36,12 @@
 
     <f:validateButton title="${%Test Connection}" progress="${%Testing...}" method="testConnection" with="awsCredentialsId,region,fleet" />
 
-    <f:entry title="${%Launcher}" field="laucnher">
+    <f:entry title="${%Launcher}" field="launcher">
       <f:dropdownDescriptorSelector field="computerConnector" descriptors="${descriptor.getComputerConnectorDescriptors()}"/>
     </f:entry>
 
-    <f:description>Connect using private IP</f:description>
-    <f:entry title="${%Connect Private}" field="privateIpUsed">
+    <f:description>Connect to instances via private IP instead of public IP</f:description>
+    <f:entry title="${%Private IP}" field="privateIpUsed">
       <f:checkbox />
     </f:entry>
 
@@ -52,7 +52,7 @@
 
     <f:description>Only build jobs with label expressions matching this node
     </f:description>
-    <f:entry title="${%Restrict usage}" field="restrictUsage">
+    <f:entry title="${%Restrict Usage}" field="restrictUsage">
       <f:checkbox />
     </f:entry>
 
@@ -78,8 +78,8 @@
       <f:number clazz="required positive-number" default="1" />
     </f:entry>
 
-    <f:description>Disable auto resubmit build if failed because of EC2 instance termination like Spot</f:description>
-    <f:entry title="${%Disable build resubmit}" field="disableTaskResubmit">
+    <f:description>Disable auto resubmitting a build if it failed due to an EC2 instance termination like a Spot interruption</f:description>
+    <f:entry title="${%Disable Build Resubmit}" field="disableTaskResubmit">
       <f:checkbox />
     </f:entry>
 
