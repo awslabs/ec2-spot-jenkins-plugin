@@ -613,7 +613,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         jenkinsNodesToRemove.addAll(jenkinsNodesWithoutInstance);
         // Remove dying fleet instances from Jenkins
         for (final String instance : jenkinsNodesToRemove) {
-            info("Fleet (" + getLabelString() + ") no longer has the instance " + instance + ", removing from Jenkins.");
             removeNode(instance);
         }
 
@@ -722,6 +721,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         final Node n = jenkins.getNode(instanceId);
         if (n != null) {
             try {
+                info("Fleet (" + getLabelString() + ") no longer has the instance " + instanceId + ", removing from Jenkins.");
                 jenkins.removeNode(n);
             } catch (final Exception ex) {
                 throw new IllegalStateException(String.format("Error removing node %s", instanceId), ex);
