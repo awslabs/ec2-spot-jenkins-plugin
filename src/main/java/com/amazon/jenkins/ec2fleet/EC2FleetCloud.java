@@ -126,6 +126,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     private final Integer initOnlineTimeoutSec;
     private final Integer initOnlineCheckIntervalSec;
     private final Integer cloudStatusIntervalSec;
+    private final Integer maxTotalUses;
 
     /**
      * @see EC2FleetAutoResubmitComputerLauncher
@@ -139,7 +140,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
     /**
      * {@link EC2FleetCloud#update()} updating this field, this is one thread
-     * related to {@link CloudNanny}. At the same time {@link IdleRetentionStrategy}
+     * related to {@link CloudNanny}. At the same time {@link EC2RetentionStrategy}
      * call {@link EC2FleetCloud#scheduleToTerminate(String)} to stop instance when it free
      * and use this field to know what capacity is current one.
      * <p>
@@ -176,6 +177,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                          final int numExecutors,
                          final boolean addNodeOnlyIfRunning,
                          final boolean restrictUsage,
+                         final String maxTotalUses,
                          final boolean disableTaskResubmit,
                          final Integer initOnlineTimeoutSec,
                          final Integer initOnlineCheckIntervalSec,
@@ -197,6 +199,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         this.alwaysReconnect = alwaysReconnect;
         this.minSize = minSize;
         this.maxSize = maxSize;
+        this.maxTotalUses = StringUtils.isBlank(maxTotalUses) ? -1 : Integer.parseInt(maxTotalUses);
         this.numExecutors = Math.max(numExecutors, 1);
         this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
@@ -268,6 +271,10 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
     public String getEndpoint() {
         return endpoint;
+    }
+
+    public int getMaxTotalUses() {
+        return maxTotalUses;
     }
 
     public String getFleet() {
@@ -773,10 +780,10 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet slave for " + instanceId,
                 effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
-                this, computerLauncher);
+                this, computerLauncher, maxTotalUses);
 
         // Initialize our retention strategy
-        node.setRetentionStrategy(new IdleRetentionStrategy());
+        node.setRetentionStrategy(new EC2RetentionStrategy());
 
         final Jenkins jenkins = Jenkins.getInstance();
         // jenkins automatically remove old node with same name if any
@@ -845,6 +852,16 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
         public ListBoxModel doFillRegionItems(@QueryParameter final String awsCredentialsId) {
             return RegionHelper.getRegionsListBoxModel(awsCredentialsId);
+        }
+
+        public FormValidation doCheckMaxTotalUses(@QueryParameter String value) {
+            try {
+                int val = Integer.parseInt(value);
+                if (val >= -1)
+                    return FormValidation.ok();
+            } catch (NumberFormatException nfe) {
+            }
+            return FormValidation.error("Maximum Total Uses must be greater or equal to -1");
         }
 
         public ListBoxModel doFillFleetItems(@QueryParameter final boolean showAllFleets,

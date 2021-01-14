@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
 @PrepareForTest(SlaveComputer.class)
-public class IdleRetentionStrategyTest {
+public class EC2RetentionStrategyTest {
 
     @Mock
     private EC2FleetCloud cloud;
@@ -47,7 +47,7 @@ public class IdleRetentionStrategyTest {
     public void if_idle_time_not_configured_should_do_nothing() {
         when(cloud.getIdleMinutes()).thenReturn(0);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, times(0)).getNode();
         verify(cloud, times(0)).scheduleToTerminate(anyString());
@@ -60,7 +60,7 @@ public class IdleRetentionStrategyTest {
         when(cloud.hasExcessCapacity()).thenReturn(Boolean.TRUE);
         when(slaveComputer.isIdle()).thenReturn(Boolean.TRUE);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, times(1)).getNode();
         verify(cloud, times(1)).scheduleToTerminate(anyString());
@@ -72,7 +72,7 @@ public class IdleRetentionStrategyTest {
         when(cloud.hasExcessCapacity()).thenReturn(Boolean.TRUE);
         when(slaveComputer.isIdle()).thenReturn(Boolean.FALSE);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, times(0)).getNode();
         verify(cloud, times(0)).scheduleToTerminate(anyString());
@@ -85,7 +85,7 @@ public class IdleRetentionStrategyTest {
         when(slaveComputer.isIdle()).thenReturn(Boolean.TRUE);
         when(cloud.getIdleMinutes()).thenReturn(0);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, times(0)).getNode();
         verify(cloud, times(0)).scheduleToTerminate(anyString());
@@ -96,7 +96,7 @@ public class IdleRetentionStrategyTest {
     public void if_idle_time_configured_should_do_nothing_if_node_idle_less_time() {
         when(slaveComputer.getIdleStartMilliseconds()).thenReturn(System.currentTimeMillis());
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, never()).getNode();
         verify(cloud, never()).scheduleToTerminate(anyString());
@@ -108,7 +108,7 @@ public class IdleRetentionStrategyTest {
     public void if_node_not_execute_anything_yet_idle_time_negative_do_nothing() {
         when(slaveComputer.getIdleStartMilliseconds()).thenReturn(Long.MIN_VALUE);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(slaveComputer, times(0)).getNode();
         verify(cloud, times(0)).scheduleToTerminate(anyString());
@@ -118,7 +118,7 @@ public class IdleRetentionStrategyTest {
 
     @Test
     public void if_idle_time_configured_should_terminate_node_if_idle_time_more_then_allowed() {
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(cloud, times(1)).scheduleToTerminate("n-a");
         verify(slaveComputer, times(1)).setAcceptingTasks(true);
@@ -129,7 +129,7 @@ public class IdleRetentionStrategyTest {
     public void if_computer_has_no_cloud_should_do_nothing() {
         when(slaveComputer.getCloud()).thenReturn(null);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(cloud, times(0)).scheduleToTerminate(anyString());
         verify(slaveComputer, times(0)).setAcceptingTasks(true);
@@ -141,7 +141,7 @@ public class IdleRetentionStrategyTest {
         when(slaveComputer.getIdleStartMilliseconds()).thenReturn(0L);
         when(slaveComputer.isIdle()).thenReturn(false);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(cloud, never()).scheduleToTerminate("n-a");
         verify(slaveComputer, times(1)).setAcceptingTasks(true);
@@ -152,7 +152,7 @@ public class IdleRetentionStrategyTest {
     public void if_node_idle_time_more_them_allowed_but_not_idle_should_do_nothing() {
         when(slaveComputer.isIdle()).thenReturn(false);
 
-        new IdleRetentionStrategy().check(slaveComputer);
+        new EC2RetentionStrategy().check(slaveComputer);
 
         verify(cloud, never()).scheduleToTerminate("n-a");
         verify(slaveComputer, times(1)).setAcceptingTasks(true);
@@ -164,7 +164,7 @@ public class IdleRetentionStrategyTest {
         when(cloud.scheduleToTerminate(anyString())).thenThrow(new IllegalArgumentException("test"));
 
         try {
-            new IdleRetentionStrategy().check(slaveComputer);
+            new EC2RetentionStrategy().check(slaveComputer);
             fail();
         } catch (IllegalArgumentException e) {
             assertEquals("test", e.getMessage());

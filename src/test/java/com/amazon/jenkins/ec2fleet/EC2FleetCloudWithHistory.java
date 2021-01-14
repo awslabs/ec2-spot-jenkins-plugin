@@ -21,7 +21,7 @@ public class EC2FleetCloudWithHistory extends EC2FleetCloud {
             Integer cloudStatusIntervalSec, boolean immediatelyProvision) {
         super(name, oldId, awsCredentialsId, credentialsId, region, endpoint, fleet, labelString, fsRoot,
                 computerConnector, privateIpUsed, alwaysReconnect, idleMinutes, minSize, maxSize, numExecutors,
-                addNodeOnlyIfRunning, restrictUsage, disableTaskResubmit, initOnlineTimeoutSec,
+                addNodeOnlyIfRunning, restrictUsage, "-1", disableTaskResubmit, initOnlineTimeoutSec,
                 initOnlineCheckIntervalSec, scaleExecutorsByWeight, cloudStatusIntervalSec, immediatelyProvision);
     }
 

@@ -37,7 +37,6 @@ import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsImpl;
 import com.cloudbees.jenkins.plugins.sshcredentials.impl.BasicSSHUserPrivateKey;
 import com.cloudbees.plugins.credentials.CredentialsScope;
 import com.cloudbees.plugins.credentials.SystemCredentialsProvider;
-import hudson.model.FreeStyleBuild;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.plugins.sshslaves.SSHConnector;
 import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
@@ -135,7 +134,7 @@ public class RealTest extends IntegrationTest {
                 autoScalingGroupName,
                 "momo", null, computerConnector, false, false,
                 1, 0, 5, 1, true, false,
-                false, 180, 15, false,
+                "-1", false, 180, 15, false,
                 10, true);
         j.jenkins.clouds.add(cloud);
 
@@ -187,7 +186,7 @@ public class RealTest extends IntegrationTest {
                 requestSpotFleetResult.getSpotFleetRequestId(),
                 "momo", null, computerConnector, false, false,
                 1, 0, 5, 1, true, false,
-                false, 180, 15, false,
+                "-1", false, 180, 15, false,
                 10, true);
         j.jenkins.clouds.add(cloud);
 
