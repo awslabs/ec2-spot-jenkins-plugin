@@ -1,26 +1,26 @@
-Specify maximum time which Jenkins will wait for EC2 instance startup before
-trying to request new instance from fleet.
+The maximum time Jenkins will wait for an EC2 instance to become active before
+trying to request a new instance from the fleet.
 
 <p>
-    By default Jenkins expect that node will be available immediately, however EC2 instance
-    requires some time to be provision, start and be ready for actual builds. In result
-    Jenkins might request more capacity then actually required (over-provision). This setting
-    avoids over-provision by force Jenkins to wait until EC2 instance will be online and
-    don't request more capacity.
+    By default, Jenkins expects that a node will be available immediately. However, EC2 instances
+    require some time to be provisioned, start, and be ready for builds. Therefore,
+    Jenkins might request more capacity than is actually required (over-provision). This setting
+    prevents over-provisioning by forcing Jenkins to wait until an EC2 instance is online before requesting
+    more capacity.
 </p>
 
 <p>
-    In case of positive value, will force Jenkins to wait when EC2 instance will be online,
-    no more then specified time in seconds. Cannot be negative.
-    In case of <code>0</code>, timeout will be disabled and Jenkins will
-    not wait any time to start up EC2 instance, which could lead to over-provision.
+    Cannot be negative.
+    For positive values, force Jenkins to wait up to the given value for an instance to come online.
+    If set to <code>0</code>, the timeout will be disabled and Jenkins will
+    not wait any time to start up EC2 instance, which could lead to over-provisioning.
 </p>
 <p>
-    <b>Note</b> Be careful with very big values (more 5 min) for this settings. In case of any problem
-    with node (no java, wrong version of java, Jenkins agent cannot start), so it cannot be online.
-    Jenkins will wait, without requesting additional capacity.
+    <b>Note:</b> Be careful with exceedingly large values (more than 5 min) for this setting. If any problem
+    prevents the node from coming online (no Java, wrong version of Java, Jenkins agent cannot start, etc.),
+    Jenkins will wait without requesting additional capacity.
 </p>
 <p>
-    Behavior of previous versions of plugin could be represented as this version
+    Behavior of versions of plugin before 1.8.0 could be represented as this version
     with timeout set to <code>0</code>.
 </p>

@@ -3,20 +3,20 @@ Enable no delay provision strategy.
     Disabled by default.
 </p>
 <p>
-    Enabling of this setting will disable default Jenkins behavior for particular cloud
-    and ask this cloud to provision new agents almost as soon as new jobs appear in queue.
+    Enabling this setting will disable default Jenkins behavior for a particular cloud
+    and ask this cloud to provision new agents almost as soon as new jobs appear in the queue.
 </p>
 <p>
-    When this option is disable (by default).
-    Each time when Jenkins doesn't have enough agent to execute all jobs in a queue.
-    Jenkins starts provision of new agents. Default strategy is trying to keep amount of agents
-    as small as possible. It waits a little bit until queue will not reach some limit or
-    jobs in a queue will not reach some age. As result before scheduled job will be executed you can
+    When this option is disabled (by default):
+    Each time Jenkins doesn't have enough agents to execute all jobs in a queue,
+    Jenkins starts provisioning new agents. The default strategy tries to keep the amount of agents
+    as small as possible. Jenkins waits a little bit until the number of jobs in the queue reaches some limit or
+    jobs in the queue reach some age. As a result, before a scheduled job will be executed you can
     see some delay.
 </p>
 <p>
-    <b>Note</b> Enabling of this setting could increase chance of over provision, because of that
-    make sure that your <code>Max Idle Minutes Before Scaledown</code> has expected value so
-    free capacity could be scale in. While Linux capacity billing per minute, Windows capacity
-    billing per hour, so be careful with this option.
+    <b>Note:</b> Enabling this setting can increase the chance of over-provisioning. Because of that,
+    make sure that your <code>Max Idle Minutes Before Scaledown</code> is set so that
+    free capacity can be scaled in. While Linux capacity is billed per minute, Windows capacity
+    is billed per hour, so be careful with this option.
 </p>

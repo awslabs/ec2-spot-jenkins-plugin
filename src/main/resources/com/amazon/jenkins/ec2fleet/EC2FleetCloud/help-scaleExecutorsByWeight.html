@@ -1,21 +1,22 @@
-If unchecked which is default, plugin will not use
+If unchecked, which is default, plugin will not use
 <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/spot-fleet.html#spot-instance-weighting">instance
     weight</a>
-information to scale number of executors per node, and just set number of executors defined in
-configuration field <code>Number of Executors</code>
+information to scale the number of executors per node. Instead, Jenkins will just use the number of executors defined in
+configuration field <code>Number of Executors</code>.
 
 <p>
-    <b>Note</b> Auto Scaling Groups don't support weights, only EC2 Spot Fleet.
+    <b>Note:</b> The plugin only supports scaling from weight with EC2 Spot Fleet.
+    There is an open [issue](https://github.com/jenkinsci/ec2-fleet-plugin/issues/186) for ASG weight scaling support.
 </p>
 
 <p>
-    When it's checked, plugin consumes instance weight information provided by Launch Specification
-    and uses it to scale node number of executors from configuration field <code>Number of Executors</code>
-    <b>Note</b> current implementation doesn't support Launch Template only Launch Specification
+    When checked, the plugin consumes instance weight information provided by a Launch Specification
+    and uses it to scale the node's number of executors from configuration field <code>Number of Executors</code>.
+    <b>Note:</b> current implementation doesn't support Launch Template, only Launch Specification.
 </p>
 
 <p>
-    Example (here instance type from launch specification match with
+    Example (here instance type from launch specification matches with
     launched instance type):
 
 <table>
@@ -62,7 +63,7 @@ configuration field <code>Number of Executors</code>
 </p>
 
 <p>
-    Plugin always set number of executors <b>at least one</b>.
-    If launched instance type doesn't match any weight in launch specification
-    regular number of executors will be used without any scale.
+    Plugin always set number of executors to <b>at least one</b>.
+    If the launched instance type doesn't match any weight in launch specification,
+    regular number of executors will be used without any scaling.
 </p>

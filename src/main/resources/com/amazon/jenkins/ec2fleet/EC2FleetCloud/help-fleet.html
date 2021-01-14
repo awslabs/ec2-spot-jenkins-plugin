@@ -1,22 +1,20 @@
-Select fleet which will be used to launch Jenkins workers. EC2 Spot Fleet and Auto Scaling Group
-supported.
+Select the fleet which will be used to launch Jenkins workers. EC2 Spot Fleet and Auto Scaling Group
+are both supported.
 <p>
-    By default this list include only active
-    EC2 Spot Fleets and Auto Scaling Groups. If you need to see all fleet include cancelled etc.
-    click checkbox below. Selected fleet will be in list regardless of fleet state.
+    By default, this list only includes active
+    EC2 Spot Fleets and Auto Scaling Groups. If you need to see all fleets,
+    click the checkbox below. The selected fleet will be in the list regardless of fleet state.
 </p>
 <p>
-    <b>EC2 Spot Fleet specific</b> All non <code>maintain</code> fleets will be filter out from this list.
-    Plugin requires stable capacity.
+    <b>EC2 Spot Fleet specific:</b> All non <code>maintain</code> type fleets will be filtered out from this list.
     <a href="https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/ec2-fleet-configuration-strategies.html#ec2-fleet-request-type">More
-        about
-        types</a>
+        about types</a>.
 
-    If you are not sure about your fleet check its type by API or
-    check if <code>Maintain target capacity</code> enabled in UI for this spot fleet.
+    If you are not sure about your fleet type, check its type via an API call or look in the console UI for
+    <code>Maintain Target Capacity</code> being enabled.
 </p>
 <p>
-    <b>AWS Permissions: </b> Plugin requires certain AWS permissions for managing resources. You can check missing permissions by clicking <b>Test Connection</b> button.
-    Test Connection button does not validate certain listed permissions such as TerminateInstances and UpdateAutoScalingGroup due to API restrictions.
-    Check out <a href="https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/README.md"> README</a> for inline IAM Policy.
+    <b>AWS Permissions: </b> The plugin requires certain AWS permissions for managing resources. You can check missing permissions by clicking the <b>Test Connection</b> button.
+    The Test Connection button does not validate certain listed permissions such as TerminateInstances and UpdateAutoScalingGroup due to API restrictions.
+    Check out the <a href="https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/README.md">README</a> for an inline IAM Policy.
 </p>

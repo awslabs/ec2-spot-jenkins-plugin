@@ -154,8 +154,10 @@ Once the Spot Fleet or ASG is ready, you can use it by adding a new **EC2 Fleet*
 1. Install ```EC2 Fleet Jenkins Plugin```
 1. Goto ```Manage Jenkins > Configure System```
 1. Click ```Add a new cloud``` and select ```Amazon EC2 Fleet```
-1. Configure AWS credentials, or alternatively leave empty to use the EC2 instance role
+1. Configure AWS credentials, or leave empty to use the EC2 instance role
 1. Specify EC2 Spot Fleet or Auto Scaling Group which you want to use
+
+More information on the configuration options can be found [here](https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/docs/CONFIGURATION-OPTIONS.md).
 
 ## Scaling
 You can specify the scaling limits in your cloud settings. By default, Jenkins will try to scale the fleet up
@@ -297,6 +299,10 @@ launcher can be found [here](https://github.com/jenkinsci/ssh-slaves-plugin/blob
    - example ```java -version && ```
 1. To apply for existing instances, restart Jenkins or Delete Nodes from Jenkins so they will be reconnected
 
+# FAQ
+
+Check out the FAQ & Gotchas page [here](https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/docs/FAQ.md).
+
 # Development
 
 Plugin usage statistics per Jenkins version can be found [here](https://stats.jenkins.io/pluginversions/ec2-fleet.html)
@@ -333,3 +339,7 @@ Don't forget to encode with Base64
 yum install java-1.8.0 -y && yum remove java-1.7.0-openjdk -y && java -version
 ```
 
+# Contributing
+ 
+Contributions are welcome! Please read our [guidelines](https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/CONTRIBUTING.md)
+and our [Code of Conduct](https://github.com/jenkinsci/ec2-fleet-plugin/blob/master/CODE_OF_CONDUCT.md).
