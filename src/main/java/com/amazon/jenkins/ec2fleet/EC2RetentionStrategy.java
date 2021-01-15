@@ -2,7 +2,10 @@ package com.amazon.jenkins.ec2fleet;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Computer;
+import hudson.model.Executor;
+import hudson.model.ExecutorListener;
 import hudson.model.Node;
+import hudson.model.Queue;
 import hudson.slaves.RetentionStrategy;
 import hudson.slaves.SlaveComputer;
 
@@ -13,11 +16,11 @@ import java.util.logging.Logger;
 /**
  * @see EC2FleetCloud
  */
-public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
+public class EC2RetentionStrategy extends RetentionStrategy<SlaveComputer> implements ExecutorListener {
 
     private static final int RE_CHECK_IN_MINUTE = 1;
 
-    private static final Logger LOGGER = Logger.getLogger(IdleRetentionStrategy.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(EC2RetentionStrategy.class.getName());
 
     /**
      * Will be called under {@link hudson.model.Queue#withLock(Runnable)}
@@ -89,5 +92,54 @@ public class IdleRetentionStrategy extends RetentionStrategy<SlaveComputer> {
         final long maxIdle = TimeUnit.MINUTES.toMillis(idleMinutes);
         LOGGER.log(Level.INFO, "Instance: " + computer.getDisplayName() + " Age: " + idleTime + " Max Age:" + maxIdle);
         return idleTime > maxIdle;
+    }
+
+    @Override
+    public void taskAccepted(Executor executor, Queue.Task task) {
+        final EC2FleetNodeComputer computer = (EC2FleetNodeComputer) executor.getOwner();
+        if (computer != null) {
+            final EC2FleetNode ec2FleetNode = computer.getNode();
+            if (ec2FleetNode != null) {
+                final int maxTotalUses = ec2FleetNode.getMaxTotalUses();
+                if (maxTotalUses <= -1) {
+                    LOGGER.fine("maxTotalUses set to unlimited (" + ec2FleetNode.getMaxTotalUses() + ") for agent " + computer.getName());
+                } else if (maxTotalUses <= 1) {
+                    LOGGER.info("maxTotalUses drained - suspending agent after current build " + computer.getName());
+                    computer.setAcceptingTasks(false);
+                } else {
+                    ec2FleetNode.setMaxTotalUses(ec2FleetNode.getMaxTotalUses() - 1);
+                    LOGGER.info("Agent " + computer.getName() + " has " + ec2FleetNode.getMaxTotalUses() + " builds left");
+                }
+            }
+        }
+    }
+
+    @Override
+    public void taskCompleted(Executor executor, Queue.Task task, long l) {
+        postJobAction(executor);
+    }
+
+    @Override
+    public void taskCompletedWithProblems(Executor executor, Queue.Task task, long l, Throwable throwable) {
+        postJobAction(executor);
+    }
+
+    private void postJobAction(Executor executor) {
+        final EC2FleetNodeComputer computer = (EC2FleetNodeComputer) executor.getOwner();
+        if(computer != null) {
+            final EC2FleetNode ec2FleetNode = computer.getNode();
+            if (ec2FleetNode != null) {
+                final AbstractEC2FleetCloud cloud = ec2FleetNode.getCloud();
+                if (computer.countBusy() <= 1 && !computer.isAcceptingTasks()) {
+                    LOGGER.info("Agent " + ec2FleetNode.getNodeName() + " is terminated due to maxTotalUses (" + ec2FleetNode.getMaxTotalUses() + ")");
+                    computer.setAcceptingTasks(false);
+                    cloud.scheduleToTerminate(ec2FleetNode.getNodeName());
+                } else {
+                    if (ec2FleetNode.getMaxTotalUses() == 1) {
+                        LOGGER.info("Agent " + ec2FleetNode.getNodeName() + " is still in use by more than one (" + computer.countBusy() + ") executors.");
+                    }
+                }
+            }
+        }
     }
 }

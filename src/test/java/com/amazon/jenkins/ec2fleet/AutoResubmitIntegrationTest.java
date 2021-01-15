@@ -18,7 +18,6 @@ import hudson.model.ParametersDefinitionProperty;
 import hudson.model.Result;
 import hudson.model.StringParameterDefinition;
 import hudson.model.StringParameterValue;
-import hudson.model.User;
 import hudson.model.labels.LabelAtom;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.slaves.OfflineCause;
@@ -77,7 +76,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 1, false, true,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
@@ -113,7 +112,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 1, false, true,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
@@ -169,7 +168,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 1, false, true,
-                true, 0, 0, false, 10, false);
+                "-1", true, 0, 0, false, 10, false);
         j.jenkins.clouds.add(cloud);
 
         List<QueueTaskFuture> rs = enqueTask(1);

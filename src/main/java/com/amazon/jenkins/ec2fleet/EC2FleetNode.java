@@ -17,13 +17,15 @@ import java.util.List;
 public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudAware {
 
     private volatile AbstractEC2FleetCloud cloud;
+    private int maxTotalUses;
 
     public EC2FleetNode(final String name, final String nodeDescription, final String remoteFS, final int numExecutors, final Mode mode, final String label,
-                        final List<? extends NodeProperty<?>> nodeProperties, final AbstractEC2FleetCloud cloud, ComputerLauncher launcher) throws IOException, Descriptor.FormException {
+                        final List<? extends NodeProperty<?>> nodeProperties, final AbstractEC2FleetCloud cloud, ComputerLauncher launcher, final int maxTotalUses) throws IOException, Descriptor.FormException {
         //noinspection deprecation
         super(name, nodeDescription, remoteFS, numExecutors, mode, label,
                 launcher, RetentionStrategy.NOOP, nodeProperties);
         this.cloud = cloud;
+        this.maxTotalUses = maxTotalUses;
     }
 
     @Override
@@ -53,6 +55,14 @@ public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudA
     @Override
     public void setCloud(@Nonnull AbstractEC2FleetCloud cloud) {
         this.cloud = cloud;
+    }
+
+    public int getMaxTotalUses() {
+        return this.maxTotalUses;
+    }
+
+    public void setMaxTotalUses(final int maxTotalUses) {
+        this.maxTotalUses = maxTotalUses;
     }
 
     @Extension

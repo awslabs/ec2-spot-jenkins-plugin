@@ -77,7 +77,7 @@ public class UiIntegrationTest {
         Cloud cloud = new EC2FleetCloud(null, null, null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
@@ -91,13 +91,13 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
         j.jenkins.addNode(new EC2FleetNode("node-name", "", "", 1,
                 Node.Mode.EXCLUSIVE, "", new ArrayList<NodeProperty<?>>(), cloud,
-                j.createComputerLauncher(null)));
+                j.createComputerLauncher(null), -1));
 
         HtmlPage page = j.createWebClient().goTo("computer/node-name/configure");
 
@@ -109,13 +109,13 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud = new EC2FleetCloud(null, null, null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
         j.jenkins.addNode(new EC2FleetNode("mock", "", "", 1,
                 Node.Mode.EXCLUSIVE, "", new ArrayList<NodeProperty<?>>(), cloud,
-                j.createComputerLauncher(null)));
+                j.createComputerLauncher(null), -1));
 
         HtmlPage page = j.createWebClient().goTo("configure");
         HtmlForm form = page.getFormByName("config");
@@ -135,7 +135,7 @@ public class UiIntegrationTest {
         Cloud cloud = new EC2FleetCloud(null, null, null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud);
 
@@ -149,14 +149,14 @@ public class UiIntegrationTest {
         Cloud cloud1 = new EC2FleetCloud("a", null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
         Cloud cloud2 = new EC2FleetCloud("b", null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
@@ -173,14 +173,14 @@ public class UiIntegrationTest {
         Cloud cloud1 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
         Cloud cloud2 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
@@ -197,14 +197,14 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
@@ -224,7 +224,7 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, "uh", null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
@@ -246,7 +246,7 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, "uh", null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
@@ -273,14 +273,14 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
@@ -292,14 +292,14 @@ public class UiIntegrationTest {
         EC2FleetCloud cloud1 = new EC2FleetCloud("a", null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
         EC2FleetCloud cloud2 = new EC2FleetCloud("b", null, null, null, null, null,
                 null, null, null, null, false, false,
                 0, 0, 0, 0, true, false,
-                false, 0, 0, false,
+                "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 

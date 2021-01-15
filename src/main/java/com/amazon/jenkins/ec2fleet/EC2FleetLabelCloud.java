@@ -637,12 +637,13 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
         final EC2FleetAutoResubmitComputerLauncher computerLauncher = new EC2FleetAutoResubmitComputerLauncher(
                 computerConnector.launch(address, TaskListener.NULL));
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
+        //TODO: Add maxTotalUses to EC2FleetLabelCloud similar to EC2FleetCloud
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet slave for " + instanceId,
                 effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
-                this, computerLauncher);
+                this, computerLauncher, -1);
 
         // Initialize our retention strategy
-        node.setRetentionStrategy(new IdleRetentionStrategy());
+        node.setRetentionStrategy(new EC2RetentionStrategy());
 
         final Jenkins jenkins = Jenkins.getInstance();
         // jenkins automatically remove old node with same name if any

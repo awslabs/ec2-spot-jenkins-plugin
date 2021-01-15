@@ -21,9 +21,8 @@ public class EC2FleetCloudWithMeter extends EC2FleetCloud {
             Integer initOnlineTimeoutSec, Integer initOnlineCheckIntervalSec, boolean scaleExecutorsByWeight,
             Integer cloudStatusIntervalSec, boolean immediatelyProvision) {
         super(name, oldId, awsCredentialsId, credentialsId, region, endpoint, fleet, labelString, fsRoot,
-
                 computerConnector, privateIpUsed, alwaysReconnect, idleMinutes, minSize, maxSize, numExecutors,
-                addNodeOnlyIfRunning, restrictUsage, disableTaskResubmit, initOnlineTimeoutSec, initOnlineCheckIntervalSec,
+                addNodeOnlyIfRunning, restrictUsage, "-1", disableTaskResubmit, initOnlineTimeoutSec, initOnlineCheckIntervalSec,
                 scaleExecutorsByWeight, cloudStatusIntervalSec, immediatelyProvision);
     }
 

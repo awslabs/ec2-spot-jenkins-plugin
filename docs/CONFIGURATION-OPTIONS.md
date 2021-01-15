@@ -19,6 +19,7 @@ Scale Executors by Weight | Multiply the number of executors on an instance by t
 Max Idle Minutes Before Scaledown | After this amount of time an idle instance will be scheduled for termination. **If set to 0, instances will never be terminated**. | 0
 Minimum Cluster Size | The lower limit on the number of instances the fleet can have. Uses instance weight, when applicable. Should be set equal to the ASG or Spot Fleet max instances. | 1
 Maximum Cluster Size | The upper limit on the number of instances the fleet can have. Uses instance weight, when applicable. Should be set equal to the ASG or Spot Fleet max instances. | 1
+Maximum Total Uses | Set a maximum total uses allowed for instances. After running 'maximum total uses' amount of jobs, the instance would be terminated. Set -1 for unlimited | -1 
 Disable Build Resubmit | Do not automatically resubmit jobs that were interrupted due to an instance termination (manual termination, Spot interruption, etc.) | disabled
 Maximum Init Connection Timeout in sec | EC2 instances aren't ready immediately after they're provisioned. They must become active and complete any userdata script. If that process takes longer than the time set here, consider that EC2 instance lost. | 180
 Cloud Status Interval in sec | How long to wait between update cycles. Shorter times enable the fleet to scale faster, but cause more API calls. | 10

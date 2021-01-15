@@ -32,7 +32,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
+public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     private AmazonEC2 amazonEC2;
 
@@ -69,7 +69,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
     public void shouldTerminateExcessCapacity() throws Exception {
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                1, 0, 0, 1, false, true, false, 0, 0, false, 999, false);
+                1, 0, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         // Set initial jenkins nodes
         cloud.update();
         j.jenkins.clouds.add(cloud);
@@ -78,7 +78,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // IdleRetentionStrategy checks every 60 seconds
+        // EC2RetentionStrategy checks every 60 seconds
         Thread.sleep(1000 * 60);
 
         // Make sure the scheduled for termination instances are terminated
@@ -97,7 +97,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
     public void shouldNotTerminateExcessCapacityWhenNodeIsBusy() throws Exception {
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                1, 0, 0, 1, false, true, false, 0, 0, false, 999, false);
+                1, 0, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         cloud.update();
         j.jenkins.clouds.add(cloud);
         // Keep a busy queue
@@ -108,7 +108,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // IdleRetentionStrategy checks every 60 seconds
+        // EC2RetentionStrategy checks every 60 seconds
         Thread.sleep(1000 * 60);
         cloud.update();
 
@@ -120,7 +120,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
     public void shouldTerminateIdleNodesAfterIdleTimeout() throws Exception {
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                1, 0, 2, 1, false, true, false, 0, 0, false, 99, false);
+                1, 0, 2, 1, false, true, "-1", false, 0, 0, false, 99, false);
         j.jenkins.clouds.add(cloud);
         cloud.update();
 
@@ -128,7 +128,7 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // IdleRetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
+        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
         int tries = 0;
         while (tries < 5){
             Thread.sleep(1000 * 30);
@@ -148,13 +148,13 @@ public class IdleRetentionStrategyIntegrationTest extends IntegrationTest {
     public void shouldNotTerminateBelowMinSize() throws Exception {
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
-                1, 2, 5, 1, false, true, false, 0, 0, false, 30, false);
+                1, 2, 5, 1, false, true, "-1", false, 0, 0, false, 30, false);
         j.jenkins.clouds.add(cloud);
         cloud.update();
 
         assertAtLeastOneNode();
 
-        // IdleRetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
+        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
         int tries = 0;
         while (tries < 5){
             Thread.sleep(1000 * 30);
