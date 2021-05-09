@@ -1,7 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Objects;
 import com.google.common.collect.MapMaker;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
@@ -78,6 +77,7 @@ public class CloudNanny extends PeriodicWork {
     private AtomicInteger getRecurrenceCounter(EC2FleetCloud fleetCloud) {
         AtomicInteger counter = new AtomicInteger(fleetCloud.getCloudStatusIntervalSec());
         // If a counter already exists, return the value, otherwise set the new counter value and return it.
-        return Objects.firstNonNull(recurrenceCounters.putIfAbsent(fleetCloud, counter), counter);
+        AtomicInteger existing = recurrenceCounters.putIfAbsent(fleetCloud, counter);
+        return existing != null ? existing : counter;
     }
 }
