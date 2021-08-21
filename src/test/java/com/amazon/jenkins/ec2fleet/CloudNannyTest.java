@@ -1,7 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.MapMaker;
 import hudson.slaves.Cloud;
 import org.junit.Before;
 import org.junit.Test;
@@ -15,7 +13,8 @@ import org.powermock.reflect.Whitebox;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
@@ -39,20 +38,17 @@ public class CloudNannyTest {
     private List<Cloud> clouds = new ArrayList<>();
 
     private FleetStateStats stats1 = new FleetStateStats(
-            "f1", 1, new FleetStateStats.State(true, false, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f1", 1, new FleetStateStats.State(true, false, "a"), Collections.emptySet(), Collections.<String, Double>emptyMap());
 
     private FleetStateStats stats2 = new FleetStateStats(
-            "f2", 1, new FleetStateStats.State(true, false, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f2", 1, new FleetStateStats.State(true, false, "a"), Collections.emptySet(), Collections.<String, Double>emptyMap());
 
     private int recurrencePeriod = 45;
 
     private AtomicInteger recurrenceCounter1 = new AtomicInteger();
     private AtomicInteger recurrenceCounter2 = new AtomicInteger();
 
-    private ConcurrentMap<EC2FleetCloud, AtomicInteger> recurrenceCounters = new MapMaker()
-            .weakKeys()
-            .concurrencyLevel(2)
-            .makeMap();
+    private Map<EC2FleetCloud, AtomicInteger> recurrenceCounters = Collections.synchronizedMap(new WeakHashMap<>());
 
     @Before
     public void before() throws Exception {

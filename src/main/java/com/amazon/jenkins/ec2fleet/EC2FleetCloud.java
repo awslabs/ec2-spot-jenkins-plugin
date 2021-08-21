@@ -9,8 +9,6 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -42,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
@@ -335,35 +334,35 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         return restrictUsage;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized Set<NodeProvisioner.PlannedNode> getPlannedNodesCache() {
         return plannedNodesCache;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized ArrayList<ScheduledFuture<?>> getPlannedNodeScheduledFutures() { return plannedNodeScheduledFutures; }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized void setPlannedNodeScheduledFutures(final ArrayList<ScheduledFuture<?>> futures) {
         this.plannedNodeScheduledFutures = futures;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized Set<String> getInstanceIdsToTerminate() {
         return instanceIdsToTerminate;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized int getToAdd() {
         return toAdd;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized FleetStateStats getStats() {
         return stats;
     }
 
-    @VisibleForTesting
+    // Visible for testing
     synchronized void setStats(final FleetStateStats stats) {
         this.stats = stats;
     }
@@ -424,9 +423,9 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         for (int f = 0; f < toProvision; ++f) {
             // todo make name unique per fleet
 
-            final SettableFuture<Node> settableFuture = SettableFuture.create();
+            final CompletableFuture<Node> completableFuture = new CompletableFuture<>();
             final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode(
-                    "FleetNode-" + f, settableFuture, this.numExecutors);
+                    "FleetNode-" + f, completableFuture, this.numExecutors);
 
             resultList.add(plannedNode);
             plannedNodesCache.add(plannedNode);
@@ -436,12 +435,12 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             // is updated or removed before it can scale. After scaling, EC2FleetOnlineChecker will cancel the future
             // if something happens to the Fleet.
             final ScheduledFuture<?> scheduledFuture = EXECUTOR.schedule(() -> {
-                if (settableFuture.isDone()) {
+                if (completableFuture.isDone()) {
                     return;
                 }
                 info("scaling timeout reached, removing node from Jenkins's plannedCapacitySnapshot");
-                // with set(null) Jenkins will remove future from plannedCapacity without making a fuss
-                    settableFuture.set(null);
+                // with complete(null) Jenkins will remove future from plannedCapacity without making a fuss
+                    completableFuture.complete(null);
                 return;
                 },
                 getScheduledFutureTimeoutSec(), TimeUnit.SECONDS);
@@ -792,15 +791,15 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         jenkins.addNode(node);
 
         // todo use plannedNodesCache in thread-safe way
-        final SettableFuture<Node> future;
+        final CompletableFuture<Node> future;
         if (plannedNodesCache.isEmpty()) {
             // handle the case where we have new nodes the plugin didn't request
-            future = SettableFuture.create();
+            future = new CompletableFuture<>();
         } else {
             // handle the standard case where this node came from one of our scale up events
             final NodeProvisioner.PlannedNode plannedNode = plannedNodesCache.iterator().next();
             plannedNodesCache.remove(plannedNode);
-            future = ((SettableFuture<Node>) plannedNode.future);
+            future = ((CompletableFuture<Node>) plannedNode.future);
         }
 
         // use getters for timeout and interval as they provide default value

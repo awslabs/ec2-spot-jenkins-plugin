@@ -1,6 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.annotations.VisibleForTesting;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.slaves.Cloud;
@@ -54,7 +53,6 @@ public class EC2FleetStatusWidgetUpdater extends PeriodicWork {
      *
      * @return widgets
      */
-    @VisibleForTesting
     private static List<Widget> getWidgets() {
         return Jenkins.getActiveInstance().getWidgets();
     }
@@ -65,7 +63,6 @@ public class EC2FleetStatusWidgetUpdater extends PeriodicWork {
      *
      * @return basic java list
      */
-    @VisibleForTesting
     private static List<Cloud> getClouds() {
         return Jenkins.getActiveInstance().clouds;
     }

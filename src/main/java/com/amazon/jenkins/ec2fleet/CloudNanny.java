@@ -1,14 +1,14 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.collect.MapMaker;
 import hudson.Extension;
 import hudson.model.PeriodicWork;
 import hudson.slaves.Cloud;
 import jenkins.model.Jenkins;
 
+import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentMap;
+import java.util.Map;
+import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -22,10 +22,8 @@ public class CloudNanny extends PeriodicWork {
 
     private static final Logger LOGGER = Logger.getLogger(CloudNanny.class.getName());
 
-    private final ConcurrentMap<EC2FleetCloud, AtomicInteger> recurrenceCounters = new MapMaker()
-            .weakKeys() // the map should not hold onto fleet instances to allow deletion of fleets.
-            .concurrencyLevel(1)
-            .makeMap();
+    // the map should not hold onto fleet instances to allow deletion of fleets.
+    private final Map<EC2FleetCloud, AtomicInteger> recurrenceCounters = Collections.synchronizedMap(new WeakHashMap<>());
 
     @Override
     public long getRecurrencePeriod() {
@@ -68,12 +66,10 @@ public class CloudNanny extends PeriodicWork {
      *
      * @return basic java list
      */
-    @VisibleForTesting
     private static List<Cloud> getClouds() {
         return Jenkins.getActiveInstance().clouds;
     }
 
-    @VisibleForTesting
     private AtomicInteger getRecurrenceCounter(EC2FleetCloud fleetCloud) {
         AtomicInteger counter = new AtomicInteger(fleetCloud.getCloudStatusIntervalSec());
         // If a counter already exists, return the value, otherwise set the new counter value and return it.

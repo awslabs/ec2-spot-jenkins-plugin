@@ -11,8 +11,6 @@ import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.runner.RunWith;
@@ -22,6 +20,7 @@ import org.mockito.junit.MockitoJUnitRunner;
 
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -72,7 +71,10 @@ public class EC2ApiTest {
         Map<String, Instance> described = new EC2Api().describeInstances(amazonEC2, instanceIds);
 
         // then
-        Assert.assertEquals(ImmutableMap.of("i-1", instance1, "i-2", instance2), described);
+        Map<String, Instance> expected = new HashMap<>();
+        expected.put("i-1", instance1);
+        expected.put("i-2", instance2);
+        Assert.assertEquals(expected, described);
         verify(amazonEC2, times(1))
                 .describeInstances(any(DescribeInstancesRequest.class));
     }
@@ -135,7 +137,10 @@ public class EC2ApiTest {
         Map<String, Instance> described = new EC2Api().describeInstances(amazonEC2, instanceIds);
 
         // then
-        Assert.assertEquals(ImmutableMap.of("i-1", instance1, "i-2", instance2), described);
+        Map<String, Instance> expected = new HashMap<>();
+        expected.put("i-1", instance1);
+        expected.put("i-2", instance2);
+        Assert.assertEquals(expected, described);
         verify(amazonEC2, times(2))
                 .describeInstances(any(DescribeInstancesRequest.class));
     }
@@ -260,7 +265,7 @@ public class EC2ApiTest {
         final Map<String, Instance> described = new EC2Api().describeInstances(amazonEC2, instanceIds);
 
         // then
-        Assert.assertEquals(ImmutableMap.of("i-3", instance3), described);
+        Assert.assertEquals(Collections.singletonMap("i-3", instance3), described);
         verify(amazonEC2).describeInstances(new DescribeInstancesRequest().withInstanceIds(Arrays.asList("i-1", "i-3", "i-f")));
         verify(amazonEC2).describeInstances(new DescribeInstancesRequest().withInstanceIds(Arrays.asList("i-3")));
         verifyNoMoreInteractions(amazonEC2);
@@ -321,11 +326,11 @@ public class EC2ApiTest {
     @Test
     public void tagInstances_shouldTag() {
         // when
-        new EC2Api().tagInstances(amazonEC2, ImmutableSet.of("i-1", "i-2"), "opa", "v");
+        new EC2Api().tagInstances(amazonEC2, new HashSet<>(Arrays.asList("i-1", "i-2")), "opa", "v");
 
         // then
         verify(amazonEC2).createTags(new CreateTagsRequest()
-                .withResources(ImmutableSet.of("i-1", "i-2"))
+                .withResources(new HashSet<>(Arrays.asList("i-1", "i-2")))
                 .withTags(new Tag().withKey("opa").withValue("v")));
         verifyNoMoreInteractions(amazonEC2);
     }
@@ -333,11 +338,11 @@ public class EC2ApiTest {
     @Test
     public void tagInstances_givenNullValueShouldTagWithEmptyValue() {
         // when
-        new EC2Api().tagInstances(amazonEC2, ImmutableSet.of("i-1", "i-2"), "opa", null);
+        new EC2Api().tagInstances(amazonEC2, new HashSet<>(Arrays.asList("i-1", "i-2")), "opa", null);
 
         // then
         verify(amazonEC2).createTags(new CreateTagsRequest()
-                .withResources(ImmutableSet.of("i-1", "i-2"))
+                .withResources(new HashSet<>(Arrays.asList("i-1", "i-2")))
                 .withTags(new Tag().withKey("opa").withValue("")));
         verifyNoMoreInteractions(amazonEC2);
     }

@@ -1,6 +1,5 @@
 package com.amazon.jenkins.ec2fleet.fleet;
 
-import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.concurrent.ThreadSafe;
@@ -40,7 +39,7 @@ public class EC2Fleets {
         return StringUtils.startsWith(fleet, EC2_SPOT_FLEET_PREFIX);
     }
 
-    @VisibleForTesting
+    // Visible for testing
     public static void setGet(EC2Fleet ec2Fleet) {
         GET = ec2Fleet;
     }

@@ -9,7 +9,6 @@ import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlFormUtil;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
-import com.google.common.collect.ImmutableSet;
 import hudson.PluginWrapper;
 import hudson.model.Node;
 import hudson.slaves.Cloud;
@@ -26,7 +25,9 @@ import org.xml.sax.SAXException;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.Assert.assertEquals;
@@ -62,7 +63,7 @@ public class UiIntegrationTest {
         final AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
 
         when(ec2Fleet.getState(anyString(), anyString(), nullable(String.class), anyString()))
-                .thenReturn(new FleetStateStats("", 2, FleetStateStats.State.active(), ImmutableSet.of("i-1", "i-2"), Collections.emptyMap()));
+                .thenReturn(new FleetStateStats("", 2, FleetStateStats.State.active(), new HashSet<>(Arrays.asList("i-1", "i-2")), Collections.emptyMap()));
         when(ec2Api.connect(anyString(), anyString(), Mockito.nullable(String.class))).thenReturn(amazonEC2);
     }
 
