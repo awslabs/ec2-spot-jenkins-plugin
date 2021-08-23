@@ -82,7 +82,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
 
         assertTrue(StringUtils.isNotBlank(((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.oldId").get(0)).getText()));
     }
@@ -118,7 +118,7 @@ public class UiIntegrationTest {
                 Node.Mode.EXCLUSIVE, "", new ArrayList<NodeProperty<?>>(), cloud,
                 j.createComputerLauncher(null), -1));
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
         HtmlForm form = page.getFormByName("config");
 
         ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
@@ -140,9 +140,9 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        assertEquals("ec2-fleet", ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.labelString").get(1)).getText());
+        assertEquals("ec2-fleet", ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.labelString").get(0)).getText());
     }
 
     @Test
@@ -161,7 +161,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
 
         List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
         assertEquals(2, elementsByName.size());
@@ -185,7 +185,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
 
         List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
         assertEquals(2, elementsByName.size());
@@ -209,7 +209,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
         HtmlForm form = page.getFormByName("config");
 
         ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
@@ -229,7 +229,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
 
         final List<DomElement> regionDropDown = getElementsByNameWithoutJdk(page, "_.region");
 
@@ -251,7 +251,7 @@ public class UiIntegrationTest {
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
-        HtmlPage page = j.createWebClient().goTo("configure");
+        HtmlPage page = j.createWebClient().goTo("configureClouds");
         boolean isPresent = false;
 
         final List<DomElement> regionDropDown = getElementsByNameWithoutJdk(page, "_.region");

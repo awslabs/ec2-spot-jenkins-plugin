@@ -17,7 +17,7 @@
   <properties>
     <jenkins.version>2.235.5</jenkins.version>
     <java.level>8</java.level>
-    <configuration-as-code.version>1.14</configuration-as-code.version>
+    <configuration-as-code.version>1.51</configuration-as-code.version>
   </properties>
 
   <name>EC2 Fleet Jenkins Plugin</name>
@@ -94,11 +94,6 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-slaves</artifactId>
     </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jackson2-api</artifactId>
-      <version>2.7.3</version>
-    </dependency>
 
     <!-- tests -->
 
@@ -134,20 +129,23 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.jenkins</groupId>
-      <artifactId>configuration-as-code</artifactId>
+      <groupId>io.jenkins.configuration-as-code</groupId>
+      <artifactId>test-harness</artifactId>
       <version>${configuration-as-code.version}</version>
-      <classifier>tests</classifier>
       <scope>test</scope>
+      <!--
+      PCT fails on maven-enforcer-plugin:enforce
+      test-harness:1.46 puts joda-time:2.10.2
+      aws-java-sdk:1.11.821 puts 2.8.1
+      -->
+      <exclusions>
+        <exclusion>
+          <groupId>joda-time</groupId>
+          <artifactId>joda-time</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
-    <!-- before jenkins 2.112 this plugin was part of jenkins core -->
-    <dependency>
-      <groupId>io.jenkins.configuration-as-code</groupId>
-      <artifactId>configuration-as-code-support</artifactId>
-      <version>${configuration-as-code.version}</version>
-      <scope>test</scope>
-    </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>jdk-tool</artifactId>
@@ -156,5 +154,20 @@
     </dependency>
 
   </dependencies>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <compatibleSinceVersion>1.45</compatibleSinceVersion>
+          <pluginFirstClassLoader>true</pluginFirstClassLoader>
+          <minimumJavaVersion>8</minimumJavaVersion>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
 </project>
