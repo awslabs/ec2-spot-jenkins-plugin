@@ -32,19 +32,14 @@
 
   <developers>
     <developer>
-      <id>terma</id>
-      <name>Artem Stasiuk</name>
-      <email>artem.stasuk@gmail.com</email>
-    </developer>
-    <developer>
-      <id>schmutze</id>
-      <name>Chad Schmutzer</name>
-      <email>schmutze@amazon.com</email>
-    </developer>
-    <developer>
       <id>imuqtadir</id>
       <name>Abdul Muqtadir Mohammed</name>
       <email>imuqtadir23@gmail.com</email>
+    </developer>
+    <developer>
+      <id>haugenj</id>
+      <name>Jason Haugen</name>
+      <email>haugenj@amazon.com</email>
     </developer>
   </developers>
 
