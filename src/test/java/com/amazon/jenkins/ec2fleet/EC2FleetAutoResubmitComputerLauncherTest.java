@@ -93,7 +93,7 @@ public class EC2FleetAutoResubmitComputerLauncherTest {
 
         PowerMockito.mockStatic(Jenkins.class);
         PowerMockito.mockStatic(Queue.class);
-        when(Jenkins.getInstance()).thenReturn(jenkins);
+        when(Jenkins.get()).thenReturn(jenkins);
         when(Queue.getInstance()).thenReturn(queue);
 
         when(slave.getNumExecutors()).thenReturn(1);

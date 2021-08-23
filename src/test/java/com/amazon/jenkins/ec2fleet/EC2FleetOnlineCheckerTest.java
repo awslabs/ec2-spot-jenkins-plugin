@@ -45,7 +45,7 @@ public class EC2FleetOnlineCheckerTest {
 
         PowerMockito.mockStatic(Jenkins.class);
 
-        when(Jenkins.getInstance()).thenReturn(jenkins);
+        when(Jenkins.get()).thenReturn(jenkins);
 
         // final method
         PowerMockito.when(node.toComputer()).thenReturn(computer);

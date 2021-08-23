@@ -135,7 +135,7 @@ public class EC2FleetCloudTest {
         PowerMockito.mockStatic(LabelFinder.class);
 
         PowerMockito.mockStatic(Jenkins.class);
-        PowerMockito.when(Jenkins.getInstance()).thenReturn(jenkins);
+        PowerMockito.when(Jenkins.get()).thenReturn(jenkins);
     }
 
     @After
@@ -1830,7 +1830,7 @@ public class EC2FleetCloudTest {
         when(labelFinder.iterator()).thenReturn(Collections.emptyIterator());
         PowerMockito.when(LabelFinder.all()).thenReturn(labelFinder);
 
-        // mocking part of node creation process Jenkins.getInstance().getLabelAtom(l)
+        // mocking part of node creation process Jenkins.get().getLabelAtom(l)
         when(jenkins.getLabelAtom(anyString())).thenReturn(new LabelAtom("mock-label"));
     }
 
