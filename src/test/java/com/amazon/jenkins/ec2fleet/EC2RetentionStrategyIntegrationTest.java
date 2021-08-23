@@ -96,14 +96,15 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldNotTerminateExcessCapacityWhenNodeIsBusy() throws Exception {
+        // Keep a busy queue
+        List<QueueTaskFuture> rs = enqueTask(10);
+        triggerSuggestReviewNow();
+
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         cloud.update();
         j.jenkins.clouds.add(cloud);
-        // Keep a busy queue
-        List<QueueTaskFuture> rs = enqueTask(10);
-        triggerSuggestReviewNow();
 
         assertAtLeastOneNode();
 
@@ -129,9 +130,10 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
+        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds.
+        // We used to have this at 150 seconds (30s * 5 tries = 150s) but the retention strategy doesn't always run on time
         int tries = 0;
-        while (tries < 5){
+        while (tries < 8){
             Thread.sleep(1000 * 30);
             cloud.update();
             tries += 1;

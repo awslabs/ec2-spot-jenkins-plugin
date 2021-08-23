@@ -96,7 +96,6 @@
     </dependency>
 
     <!-- tests -->
-
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
@@ -144,13 +143,6 @@
           <artifactId>joda-time</artifactId>
         </exclusion>
       </exclusions>
-    </dependency>
-
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jdk-tool</artifactId>
-      <version>1.4</version>
-      <scope>test</scope>
     </dependency>
 
   </dependencies>
