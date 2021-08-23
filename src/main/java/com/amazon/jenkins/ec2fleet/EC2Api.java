@@ -17,16 +17,16 @@ import com.amazonaws.services.ec2.model.Tag;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
 import com.cloudbees.jenkins.plugins.awscredentials.AmazonWebServicesCredentials;
-import com.google.common.collect.ImmutableSet;
-import com.google.common.collect.Lists;
 import jenkins.model.Jenkins;
 import org.apache.commons.lang.StringUtils;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -39,12 +39,12 @@ public class EC2Api {
 
     private static final Logger LOGGER = Logger.getLogger(EC2Api.class.getName());
 
-    private static final ImmutableSet<String> TERMINATED_STATES = ImmutableSet.of(
+    private static final Set<String> TERMINATED_STATES = Collections.unmodifiableSet(new HashSet<>(Arrays.asList(
             InstanceStateName.Terminated.toString(),
             InstanceStateName.Stopped.toString(),
             InstanceStateName.Stopping.toString(),
             InstanceStateName.ShuttingDown.toString()
-    );
+    )));
 
     private static final int BATCH_SIZE = 900;
 
@@ -71,7 +71,11 @@ public class EC2Api {
         // don't do actual call if no data
         if (instanceIds.isEmpty()) return described;
 
-        final List<List<String>> batches = Lists.partition(new ArrayList<>(instanceIds), batchSize);
+        final List<String> instanceIdsList = new ArrayList<>(instanceIds);
+        final List<List<String>> batches = new ArrayList<>();
+        for (int i = 0; i < instanceIdsList.size(); i += batchSize) {
+            batches.add(instanceIdsList.subList(i, Math.min(i + batchSize, instanceIdsList.size())));
+        }
         for (final List<String> batch : batches) {
             describeInstancesBatch(ec2, described, batch);
         }

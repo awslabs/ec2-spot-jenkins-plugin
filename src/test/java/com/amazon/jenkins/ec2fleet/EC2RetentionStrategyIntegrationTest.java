@@ -11,7 +11,6 @@ import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
-import com.google.common.collect.ImmutableSet;
 import hudson.model.queue.QueueTaskFuture;
 import org.junit.Before;
 import org.junit.Test;
@@ -19,7 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mockito;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 
 import static org.junit.Assert.assertTrue;
@@ -45,7 +46,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
         amazonEC2 = mock(AmazonEC2.class);
 
         when(ec2Fleet.getState(anyString(), anyString(), nullable(String.class), anyString()))
-                .thenReturn(new FleetStateStats("", 2, FleetStateStats.State.active(), ImmutableSet.of("i-1", "i-2"), Collections.emptyMap()));
+                .thenReturn(new FleetStateStats("", 2, FleetStateStats.State.active(), new HashSet<>(Arrays.asList("i-1", "i-2")), Collections.emptyMap()));
         when(ec2Api.connect(anyString(), anyString(), Mockito.nullable(String.class))).thenReturn(amazonEC2);
 
         final Instance instance = new Instance()

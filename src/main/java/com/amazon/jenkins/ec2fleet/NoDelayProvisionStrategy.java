@@ -1,6 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.annotations.VisibleForTesting;
 import hudson.Extension;
 import hudson.model.Label;
 import hudson.model.LoadStatistics;
@@ -89,7 +88,7 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
         }
     }
 
-    @VisibleForTesting
+    // Visible for testing
     protected List<Cloud> getClouds() {
         return Jenkins.getInstance().clouds;
     }

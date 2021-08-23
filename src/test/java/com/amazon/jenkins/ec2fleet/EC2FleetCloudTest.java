@@ -16,8 +16,6 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.Region;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import hudson.ExtensionList;
 import hudson.model.LabelFinder;
 import hudson.model.Node;
@@ -417,7 +415,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         fleetCloud.setStats(new FleetStateStats("", 1, FleetStateStats.State.active(),
-                ImmutableSet.of("z"), Collections.<String, Double>emptyMap()));
+                Collections.singleton("z"), Collections.<String, Double>emptyMap()));
 
         // when
         boolean r = fleetCloud.scheduleToTerminate("z");
@@ -442,14 +440,14 @@ public class EC2FleetCloudTest {
                 10, false);
 
         fleetCloud.setStats(new FleetStateStats("", 2, FleetStateStats.State.active(),
-                ImmutableSet.of("z", "z1"), Collections.<String, Double>emptyMap()));
+                new HashSet<>(Arrays.asList("z", "z1")), Collections.<String, Double>emptyMap()));
 
         // when
         boolean r = fleetCloud.scheduleToTerminate("z");
 
         // then
         assertTrue(r);
-        assertEquals(ImmutableSet.of("z"), fleetCloud.getInstanceIdsToTerminate());
+        assertEquals(Collections.singleton("z"), fleetCloud.getInstanceIdsToTerminate());
     }
 
     @Test
@@ -468,7 +466,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         fleetCloud.setStats(new FleetStateStats("", 2, FleetStateStats.State.active(),
-                ImmutableSet.of("z-1", "z-2"), Collections.<String, Double>emptyMap()));
+                new HashSet<>(Arrays.asList("z-1", "z-2")), Collections.<String, Double>emptyMap()));
 
         // when
         boolean r1 = fleetCloud.scheduleToTerminate("z-1");
@@ -477,7 +475,7 @@ public class EC2FleetCloudTest {
         // then
         assertTrue(r1);
         assertTrue(r2);
-        assertEquals(ImmutableSet.of("z-1", "z-2"), fleetCloud.getInstanceIdsToTerminate());
+        assertEquals(new HashSet<>(Arrays.asList("z-1", "z-2")), fleetCloud.getInstanceIdsToTerminate());
     }
 
     @Test
@@ -496,7 +494,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         fleetCloud.setStats(new FleetStateStats("", 3, FleetStateStats.State.active(),
-                ImmutableSet.of("z1", "z2", "z3"), Collections.<String, Double>emptyMap()));
+                new HashSet<>(Arrays.asList("z1", "z2", "z3")), Collections.<String, Double>emptyMap()));
 
         // when
         boolean r1 = fleetCloud.scheduleToTerminate("z1");
@@ -507,7 +505,7 @@ public class EC2FleetCloudTest {
         assertTrue(r1);
         assertTrue(r2);
         assertFalse(r3);
-        assertEquals(ImmutableSet.of("z1", "z2"), fleetCloud.getInstanceIdsToTerminate());
+        assertEquals(new HashSet<>(Arrays.asList("z1", "z2")), fleetCloud.getInstanceIdsToTerminate());
     }
 
     @Test
@@ -678,7 +676,7 @@ public class EC2FleetCloudTest {
 
         // then
         verify(ec2Fleet).modify(anyString(), anyString(), anyString(), eq("fleetId"), eq(2), eq(0), eq(10));
-        verify(ec2Api).terminateInstances(amazonEC2, ImmutableSet.of("i-1", "i-2"));
+        verify(ec2Api).terminateInstances(amazonEC2, new HashSet<>(Arrays.asList("i-1", "i-2")));
     }
 
     @Test
@@ -698,7 +696,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0"), Collections.<String, Double>emptyMap()));
+                        Collections.singleton("i-0"), Collections.<String, Double>emptyMap()));
 
         mockNodeCreatingPart();
 
@@ -740,7 +738,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0", "i-1"), Collections.<String, Double>emptyMap()));
+                        new HashSet<>(Arrays.asList("i-0", "i-1")), Collections.<String, Double>emptyMap()));
 
         mockNodeCreatingPart();
 
@@ -757,7 +755,7 @@ public class EC2FleetCloudTest {
         fleetCloud.update();
 
         // then
-        verify(ec2Api).tagInstances(amazonEC2, ImmutableSet.of("i-0", "i-1"), "ec2-fleet-plugin:cloud-name", "FleetCloud");
+        verify(ec2Api).tagInstances(amazonEC2, new HashSet<>(Arrays.asList("i-0", "i-1")), "ec2-fleet-plugin:cloud-name", "FleetCloud");
         Node actualFleetNode = nodeCaptor.getValue();
         assertEquals(Node.Mode.NORMAL, actualFleetNode.getMode());
     }
@@ -776,7 +774,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0"), Collections.<String, Double>emptyMap()));
+                        Collections.singleton("i-0"), Collections.<String, Double>emptyMap()));
 
         mockNodeCreatingPart();
 
@@ -793,7 +791,7 @@ public class EC2FleetCloudTest {
         fleetCloud.update();
 
         // then
-        verify(ec2Api).tagInstances(amazonEC2, ImmutableSet.of("i-0"), "ec2-fleet-plugin:cloud-name", "my-fleet");
+        verify(ec2Api).tagInstances(amazonEC2, Collections.singleton("i-0"), "ec2-fleet-plugin:cloud-name", "my-fleet");
         Node actualFleetNode = nodeCaptor.getValue();
         assertEquals(Node.Mode.NORMAL, actualFleetNode.getMode());
     }
@@ -817,7 +815,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0"), Collections.<String, Double>emptyMap()));
+                        Collections.singleton("i-0"), Collections.<String, Double>emptyMap()));
 
         mockNodeCreatingPart();
 
@@ -834,7 +832,7 @@ public class EC2FleetCloudTest {
         fleetCloud.update();
 
         // then
-        verify(ec2Api).tagInstances(amazonEC2, ImmutableSet.of("i-0"), "ec2-fleet-plugin:cloud-name", "FleetCloud");
+        verify(ec2Api).tagInstances(amazonEC2, Collections.singleton("i-0"), "ec2-fleet-plugin:cloud-name", "FleetCloud");
         Node actualFleetNode = nodeCaptor.getValue();
         assertEquals(Node.Mode.NORMAL, actualFleetNode.getMode());
     }
@@ -846,7 +844,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0"), Collections.<String, Double>emptyMap()));
+                        Collections.singleton("i-0"), Collections.<String, Double>emptyMap()));
 
         final Instance instance = new Instance()
                 .withPublicIpAddress("p-ip")
@@ -899,8 +897,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of("i-0"),
-                        ImmutableMap.of(instanceType, 1.1)));
+                        Collections.singleton("i-0"),
+                        Collections.singletonMap(instanceType, 1.1)));
 
         mockNodeCreatingPart();
 
@@ -931,7 +929,7 @@ public class EC2FleetCloudTest {
 
         final FleetStateStats initState = new FleetStateStats("fleetId", 0,
                 FleetStateStats.State.active(),
-                ImmutableSet.of("i-0", "i-1"), Collections.<String, Double>emptyMap());
+                new HashSet<>(Arrays.asList("i-0", "i-1")), Collections.<String, Double>emptyMap());
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(initState);
 
@@ -1114,7 +1112,7 @@ public class EC2FleetCloudTest {
 
         final FleetStateStats initState = new FleetStateStats("fleetId", 5,
                 FleetStateStats.State.active(),
-                ImmutableSet.<String>of("i-0"), Collections.<String, Double>emptyMap());
+                Collections.singleton("i-0"), Collections.<String, Double>emptyMap());
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(initState);
 
@@ -1158,8 +1156,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
-                        ImmutableMap.of(instanceType, 2.0)));
+                        Collections.singleton(instanceId),
+                        Collections.singletonMap(instanceType, 2.0)));
 
         mockNodeCreatingPart();
 
@@ -1200,8 +1198,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
-                        ImmutableMap.of("diff-t", 2.0)));
+                        Collections.singleton(instanceId),
+                        Collections.singletonMap("diff-t", 2.0)));
 
         mockNodeCreatingPart();
 
@@ -1242,8 +1240,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
-                        ImmutableMap.of(instanceType, 1.44)));
+                        Collections.singleton(instanceId),
+                        Collections.singletonMap(instanceType, 1.44)));
 
         mockNodeCreatingPart();
 
@@ -1284,8 +1282,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
-                        ImmutableMap.of(instanceType, 1.5)));
+                        Collections.singleton(instanceId),
+                        Collections.singletonMap(instanceType, 1.5)));
 
         mockNodeCreatingPart();
 
@@ -1326,7 +1324,7 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
+                        Collections.singleton(instanceId),
                         Collections.<String, Double>emptyMap()));
 
         PowerMockito.doThrow(new UnsupportedOperationException("Test exception")).when(ec2Fleet)
@@ -1372,8 +1370,8 @@ public class EC2FleetCloudTest {
 
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
-                        ImmutableSet.of(instanceId),
-                        ImmutableMap.of(instanceType, .1)));
+                        Collections.singleton(instanceId),
+                        Collections.singletonMap(instanceType, .1)));
 
         mockNodeCreatingPart();
 
@@ -1414,14 +1412,14 @@ public class EC2FleetCloudTest {
 
         final FleetStateStats stats = new FleetStateStats("fleetId", 0,
                 FleetStateStats.State.modifying(""),
-                ImmutableSet.of(instanceId),
-                ImmutableMap.of(instanceType, .1));
+                Collections.singleton(instanceId),
+                Collections.singletonMap(instanceType, .1));
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(stats);
 
         final FleetStateStats initialState = new FleetStateStats("fleetId", 0,
                 FleetStateStats.State.active(),
-                ImmutableSet.of(instanceId),
-                ImmutableMap.of(instanceType, .1));
+                Collections.singleton(instanceId),
+                Collections.singletonMap(instanceType, .1));
 
         mockNodeCreatingPart();
 

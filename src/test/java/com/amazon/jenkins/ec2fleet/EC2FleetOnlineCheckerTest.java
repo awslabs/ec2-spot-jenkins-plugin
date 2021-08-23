@@ -1,6 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.util.concurrent.SettableFuture;
 import hudson.model.Computer;
 import hudson.model.Node;
 import jenkins.model.Jenkins;
@@ -14,6 +13,7 @@ import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
 import java.util.concurrent.CancellationException;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.when;
 @PrepareForTest({EC2FleetOnlineChecker.class, EC2FleetNode.class, Jenkins.class, Computer.class})
 public class EC2FleetOnlineCheckerTest {
 
-    private SettableFuture<Node> future = SettableFuture.create();
+    private CompletableFuture<Node> future = new CompletableFuture<>();
 
     @Mock
     private EC2FleetNode node;

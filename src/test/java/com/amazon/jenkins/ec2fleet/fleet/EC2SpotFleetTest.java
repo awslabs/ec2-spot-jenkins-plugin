@@ -14,8 +14,6 @@ import com.amazonaws.services.ec2.model.FleetType;
 import com.amazonaws.services.ec2.model.SpotFleetLaunchSpecification;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
-import com.google.common.collect.ImmutableMap;
-import com.google.common.collect.ImmutableSet;
 import hudson.util.ListBoxModel;
 import org.junit.After;
 import org.junit.Assert;
@@ -25,7 +23,11 @@ import org.junit.runner.RunWith;
 import org.mockito.Mock;
 import org.mockito.junit.MockitoJUnitRunner;
 
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -108,7 +110,7 @@ public class EC2SpotFleetTest {
 
         FleetStateStats stats = new EC2SpotFleet().getState("cred", "region", "", "f");
 
-        Assert.assertEquals(ImmutableSet.of("i-1", "i-2"), stats.getInstances());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("i-1", "i-2")), stats.getInstances());
         Assert.assertEquals(2, stats.getNumActive());
         verify(ec2).describeSpotFleetInstances(new DescribeSpotFleetInstancesRequest()
                 .withSpotFleetRequestId("f"));
@@ -125,7 +127,7 @@ public class EC2SpotFleetTest {
 
         FleetStateStats stats = new EC2SpotFleet().getState("cred", "region", "", "f");
 
-        Assert.assertEquals(ImmutableSet.of("i-1", "i-2"), stats.getInstances());
+        Assert.assertEquals(new HashSet<>(Arrays.asList("i-1", "i-2")), stats.getInstances());
         Assert.assertEquals(2, stats.getNumActive());
         verify(ec2).describeSpotFleetInstances(new DescribeSpotFleetInstancesRequest()
                 .withSpotFleetRequestId("f").withNextToken("p1"));
@@ -154,7 +156,10 @@ public class EC2SpotFleetTest {
 
         FleetStateStats stats = new EC2SpotFleet().getState("cred", "region", "", "f");
 
-        Assert.assertEquals(ImmutableMap.of("t1", 0.1, "t2", 12.0), stats.getInstanceTypeWeights());
+        Map<String, Double> expected = new HashMap<>();
+        expected.put("t1", 0.1);
+        expected.put("t2", 12.0);
+        Assert.assertEquals(expected, stats.getInstanceTypeWeights());
     }
 
     @Test

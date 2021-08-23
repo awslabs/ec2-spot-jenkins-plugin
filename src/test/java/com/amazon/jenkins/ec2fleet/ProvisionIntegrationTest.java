@@ -16,7 +16,6 @@ import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
-import com.google.common.collect.ImmutableSet;
 import hudson.model.Label;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
@@ -32,6 +31,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -72,7 +72,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         EC2Fleets.setGet(ec2Fleet);
 
         when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
-                new FleetStateStats("", 0, FleetStateStats.State.active(), ImmutableSet.<String>of(),
+                new FleetStateStats("", 0, FleetStateStats.State.active(), Collections.emptySet(),
                         Collections.<String, Double>emptyMap()));
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
@@ -265,7 +265,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         tryUntil(new Runnable() {
             @Override
             public void run() {
-                Assert.assertEquals(ImmutableSet.of("master", "momo"), labelsToNames(j.jenkins.getLabels()));
+                Assert.assertEquals(new HashSet<>(Arrays.asList("master", "momo")), labelsToNames(j.jenkins.getLabels()));
                 Assert.assertEquals(1, j.jenkins.getLabelAtom("momo").nodeProvisioner.getPendingLaunches().size());
                 Assert.assertEquals(0, j.jenkins.getNodes().size());
             }
@@ -296,10 +296,10 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         tryUntil(new Runnable() {
             @Override
             public void run() {
-                Assert.assertEquals(ImmutableSet.of("master", "momo", "i-0", "i-1"), labelsToNames(j.jenkins.getLabels()));
+                Assert.assertEquals(new HashSet<>(Arrays.asList("master", "momo", "i-0", "i-1")), labelsToNames(j.jenkins.getLabels()));
                 Assert.assertEquals(2, j.jenkins.getLabelAtom("momo").getNodes().size());
                 // node name should be instance name
-                Assert.assertEquals(ImmutableSet.of("i-0", "i-1"), nodeToNames(j.jenkins.getLabelAtom("momo").getNodes()));
+                Assert.assertEquals(new HashSet<>(Arrays.asList("i-0", "i-1")), nodeToNames(j.jenkins.getLabelAtom("momo").getNodes()));
             }
         });
 

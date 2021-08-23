@@ -1,6 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.util.concurrent.SettableFuture;
 import hudson.model.Label;
 import hudson.model.LoadStatistics;
 import hudson.model.Node;
@@ -17,6 +16,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
@@ -161,8 +161,8 @@ public class NoDelayProvisionStrategyTest {
         when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud2.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(
-                new NodeProvisioner.PlannedNode("", SettableFuture.<Node>create(), 1),
-                new NodeProvisioner.PlannedNode("", SettableFuture.<Node>create(), 1)
+                new NodeProvisioner.PlannedNode("", new CompletableFuture<>(), 1),
+                new NodeProvisioner.PlannedNode("", new CompletableFuture<>(), 1)
         ));
 
         Assert.assertEquals(
@@ -186,8 +186,8 @@ public class NoDelayProvisionStrategyTest {
         when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud2.isNoDelayProvision()).thenReturn(true);
         when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(
-                new NodeProvisioner.PlannedNode("", SettableFuture.<Node>create(), 1),
-                new NodeProvisioner.PlannedNode("", SettableFuture.<Node>create(), 1)
+                new NodeProvisioner.PlannedNode("", new CompletableFuture<>(), 1),
+                new NodeProvisioner.PlannedNode("", new CompletableFuture<>(), 1)
         ));
 
         Assert.assertEquals(
@@ -206,7 +206,7 @@ public class NoDelayProvisionStrategyTest {
         clouds.add(ec2FleetCloud1);
         when(ec2FleetCloud1.canProvision(any(Label.class))).thenReturn(true);
         when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
-        final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode("", SettableFuture.<Node>create(), 2);
+        final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode("", new CompletableFuture<>(), 2);
         when(ec2FleetCloud1.provision(any(Label.class), anyInt())).thenReturn(Arrays.asList(plannedNode));
         // then
         final NodeProvisioner.StrategyDecision decision = strategy.apply(state);

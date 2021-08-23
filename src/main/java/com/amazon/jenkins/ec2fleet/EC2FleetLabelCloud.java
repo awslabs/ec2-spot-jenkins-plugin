@@ -13,7 +13,6 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.KeyPairInfo;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
-import com.google.common.util.concurrent.SettableFuture;
 import hudson.Extension;
 import hudson.model.AbstractProject;
 import hudson.model.Computer;
@@ -47,6 +46,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -329,7 +329,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
                 for (int f = 0; f < toProvision; ++f) {
                     // todo make name unique per fleet
                     final NodeProvisioner.PlannedNode plannedNode = new NodeProvisioner.PlannedNode(
-                            "FleetNode-" + r.size(), SettableFuture.<Node>create(), this.numExecutors);
+                            "FleetNode-" + r.size(), new CompletableFuture<>(), this.numExecutors);
                     r.add(plannedNode);
                     state.getValue().plannedNodes.add(plannedNode);
                 }
@@ -649,16 +649,16 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
         // jenkins automatically remove old node with same name if any
         jenkins.addNode(node);
 
-        final SettableFuture<Node> future;
+        final CompletableFuture<Node> future;
         if (state.plannedNodes.isEmpty()) {
-            future = SettableFuture.create();
+            future = new CompletableFuture<>();
         } else {
             final Iterator<NodeProvisioner.PlannedNode> iterator = state.plannedNodes.iterator();
             final NodeProvisioner.PlannedNode plannedNode = iterator.next();
             // we remove for list as it could be multiple nodes added in one update
             iterator.remove();
             state.plannedNodesToRemove.add(plannedNode);
-            future = ((SettableFuture<Node>) plannedNode.future);
+            future = ((CompletableFuture<Node>) plannedNode.future);
         }
 
         // use getters for timeout and interval as they provide default value

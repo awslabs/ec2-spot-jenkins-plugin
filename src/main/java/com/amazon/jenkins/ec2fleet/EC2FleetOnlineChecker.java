@@ -1,11 +1,11 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.util.concurrent.SettableFuture;
 import hudson.model.Computer;
 import hudson.model.Node;
 import hudson.util.DaemonThreadFactory;
 
 import javax.annotation.concurrent.ThreadSafe;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -43,18 +43,18 @@ class EC2FleetOnlineChecker implements Runnable {
     // use daemon thread, so no problem when stop jenkins
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor(new DaemonThreadFactory());
 
-    public static void start(final Node node, final SettableFuture<Node> future, final long timeout, final long interval) {
+    public static void start(final Node node, final CompletableFuture<Node> future, final long timeout, final long interval) {
         EXECUTOR.execute(new EC2FleetOnlineChecker(node, future, timeout, interval));
     }
 
     private final long start;
     private final Node node;
-    private final SettableFuture<Node> future;
+    private final CompletableFuture<Node> future;
     private final long timeout;
     private final long interval;
 
     private EC2FleetOnlineChecker(
-            final Node node, final SettableFuture<Node> future, final long timeout, final long interval) {
+            final Node node, final CompletableFuture<Node> future, final long timeout, final long interval) {
         this.start = System.currentTimeMillis();
         this.node = node;
         this.future = future;
@@ -69,7 +69,7 @@ class EC2FleetOnlineChecker implements Runnable {
         }
 
         if (timeout < 1 || interval < 1) {
-            future.set(node);
+            future.complete(node);
             LOGGER.log(Level.INFO, String.format("%s connection check disabled, resolve planned node", node.getNodeName()));
             return;
         }
@@ -77,14 +77,14 @@ class EC2FleetOnlineChecker implements Runnable {
         final Computer computer = node.toComputer();
         if (computer != null) {
             if (computer.isOnline()) {
-                future.set(node);
+                future.complete(node);
                 LOGGER.log(Level.INFO, String.format("%s connected, resolve planned node", node.getNodeName()));
                 return;
             }
         }
 
         if (System.currentTimeMillis() - start > timeout) {
-            future.setException(new IllegalStateException(
+            future.completeExceptionally(new IllegalStateException(
                     "Fail to provision node, cannot connect to " + node.getNodeName() + " in " + timeout + " msec"));
             return;
         }

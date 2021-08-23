@@ -1,7 +1,5 @@
 package com.amazon.jenkins.ec2fleet;
 
-import com.google.common.collect.ImmutableList;
-import com.google.common.collect.ImmutableSet;
 import hudson.slaves.Cloud;
 import hudson.widgets.Widget;
 import org.junit.Before;
@@ -14,6 +12,7 @@ import org.powermock.modules.junit4.PowerMockRunner;
 import org.powermock.reflect.Whitebox;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 
@@ -44,10 +43,10 @@ public class EC2FleetStatusWidgetUpdaterTest {
     private List<Cloud> clouds = new ArrayList<>();
 
     private FleetStateStats stats1 = new FleetStateStats(
-            "f1", 1, new FleetStateStats.State(true, false, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f1", 1, new FleetStateStats.State(true, false, "a"), Collections.emptySet(), Collections.<String, Double>emptyMap());
 
     private FleetStateStats stats2 = new FleetStateStats(
-            "f2", 1, new FleetStateStats.State(true, false, "a"), ImmutableSet.<String>of(), Collections.<String, Double>emptyMap());
+            "f2", 1, new FleetStateStats.State(true, false, "a"), Collections.emptySet(), Collections.<String, Double>emptyMap());
 
     @Before
     public void before() throws Exception {
@@ -107,7 +106,7 @@ public class EC2FleetStatusWidgetUpdaterTest {
 
         getMockEC2FleetStatusWidgetUpdater().doRun();
 
-        verify(widget1).setStatusList(ImmutableList.of(
+        verify(widget1).setStatusList(Arrays.asList(
                 new EC2FleetStatusInfo(cloud1.getFleet(), stats1.getState().getDetailed(), cloud1.getLabelString(), stats1.getNumActive(), stats1.getNumDesired()),
                 new EC2FleetStatusInfo(cloud2.getFleet(), stats2.getState().getDetailed(), cloud2.getLabelString(), stats2.getNumActive(), stats2.getNumDesired())
         ));

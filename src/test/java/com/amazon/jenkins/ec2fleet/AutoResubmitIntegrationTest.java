@@ -9,7 +9,6 @@ import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
-import com.google.common.collect.ImmutableSet;
 import hudson.Functions;
 import hudson.model.FreeStyleProject;
 import hudson.model.Node;
@@ -53,7 +52,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
         Registry.setEc2Api(ec2Api);
 
         when(ec2Fleet.getState(anyString(), anyString(), nullable(String.class), anyString())).thenReturn(
-                new FleetStateStats("", 1, FleetStateStats.State.active(), ImmutableSet.of("i-1"),
+                new FleetStateStats("", 1, FleetStateStats.State.active(), Collections.singleton("i-1"),
                         Collections.<String, Double>emptyMap()));
 
         AmazonEC2 amazonEC2 = mock(AmazonEC2.class);
