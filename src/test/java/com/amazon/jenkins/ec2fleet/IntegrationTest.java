@@ -86,7 +86,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("WeakerAccess")
 public abstract class IntegrationTest {
 
-    protected static final long JOB_SLEEP_TIME = 30;
+    protected static final long JOB_SLEEP_TIME = 90;
 
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();
