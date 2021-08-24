@@ -130,14 +130,9 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds.
-        // We used to have this at 150 seconds (30s * 5 tries = 150s) but the retention strategy doesn't always run on time
-        int tries = 0;
-        while (tries < 8){
-            Thread.sleep(1000 * 30);
-            cloud.update();
-            tries += 1;
-        }
+        // EC2RetentionStrategy checks every 60 seconds, but is inconsistent about what time it's first called
+        Thread.sleep(1000 * 121);
+        cloud.update();
 
         verify((amazonEC2), times(1)).terminateInstances(argument.capture());
 
