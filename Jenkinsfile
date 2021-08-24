@@ -4,6 +4,6 @@
 def minRequiredForPlugin = null
 
 // from LTS releases https://jenkins.io/changelog-stable/
-def lts = '2.164.1'
+def lts = '2.277.1'
 
 buildPlugin(jenkinsVersions: [minRequiredForPlugin, lts], failFast: false)
