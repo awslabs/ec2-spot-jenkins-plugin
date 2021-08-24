@@ -11,6 +11,7 @@ import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
+import hudson.model.Node;
 import hudson.model.queue.QueueTaskFuture;
 import org.junit.Before;
 import org.junit.Test;
@@ -79,8 +80,15 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // EC2RetentionStrategy checks every 60 seconds
+        // Nodes take a minute to become idle
         Thread.sleep(1000 * 60);
+        // Manually trigger the retention check because it's super flaky whether it actually gets triggered
+        for (final Node node : j.jenkins.getNodes()) {
+            if (node instanceof EC2FleetNode && ((EC2FleetNode) node).getCloud() == cloud) {
+                EC2FleetNodeComputer computer = (EC2FleetNodeComputer) ((EC2FleetNode) node).getComputer();
+                new EC2RetentionStrategy().check(computer);
+            }
+        }
 
         // Make sure the scheduled for termination instances are terminated
         cloud.update();
@@ -110,8 +118,15 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // EC2RetentionStrategy checks every 60 seconds
+        // Nodes take a minute to become idle
         Thread.sleep(1000 * 60);
+        // Manually trigger the retention check because it's super flaky whether it actually gets triggered
+        for (final Node node : j.jenkins.getNodes()) {
+            if (node instanceof EC2FleetNode && ((EC2FleetNode) node).getCloud() == cloud) {
+                EC2FleetNodeComputer computer = (EC2FleetNodeComputer) ((EC2FleetNode) node).getComputer();
+                new EC2RetentionStrategy().check(computer);
+            }
+        }
         cloud.update();
 
         verify((amazonEC2), times(0)).terminateInstances(any());
@@ -130,8 +145,15 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
 
-        // EC2RetentionStrategy checks every 60 seconds, but is inconsistent about what time it's first called
-        Thread.sleep(1000 * 121);
+        // Nodes take a minute to become idle
+        Thread.sleep(1000 * 60);
+        // Manually trigger the retention check because it's super flaky whether it actually gets triggered
+        for (final Node node : j.jenkins.getNodes()) {
+            if (node instanceof EC2FleetNode && ((EC2FleetNode) node).getCloud() == cloud) {
+                EC2FleetNodeComputer computer = (EC2FleetNodeComputer) ((EC2FleetNode) node).getComputer();
+                new EC2RetentionStrategy().check(computer);
+            }
+        }
         cloud.update();
 
         verify((amazonEC2), times(1)).terminateInstances(argument.capture());
@@ -152,13 +174,16 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
         assertAtLeastOneNode();
 
-        // EC2RetentionStrategy checks every 60 seconds and idle timeout is 60 seconds so keeping total above 120 seconds i.e. 30 * 5 = 150 seconds
-        int tries = 0;
-        while (tries < 5){
-            Thread.sleep(1000 * 30);
-            cloud.update();
-            tries += 1;
+        // Nodes take a minute to become idle
+        Thread.sleep(1000 * 60);
+        // Manually trigger the retention check because it's super flaky whether it actually gets triggered
+        for (final Node node : j.jenkins.getNodes()) {
+            if (node instanceof EC2FleetNode && ((EC2FleetNode) node).getCloud() == cloud) {
+                EC2FleetNodeComputer computer = (EC2FleetNodeComputer) ((EC2FleetNode) node).getComputer();
+                new EC2RetentionStrategy().check(computer);
+            }
         }
+        cloud.update();
 
         verify((amazonEC2), times(0)).terminateInstances(any());
     }
