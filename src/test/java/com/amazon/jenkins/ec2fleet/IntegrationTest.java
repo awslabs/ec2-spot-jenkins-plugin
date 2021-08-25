@@ -244,17 +244,21 @@ public abstract class IntegrationTest {
     }
 
     protected List<QueueTaskFuture> enqueTask(int count) throws IOException {
-        return enqueTask(count, "momo");
+        return enqueTask(count, "momo", JOB_SLEEP_TIME);
     }
 
-    protected List<QueueTaskFuture> enqueTask(int count, final String labelString) throws IOException {
+    protected List<QueueTaskFuture> enqueTask(int count, final long jobSleepTime) throws IOException {
+        return enqueTask(count, "momo", jobSleepTime);
+    }
+
+    protected List<QueueTaskFuture> enqueTask(int count, final String labelString, final long jobSleepTime) throws IOException {
         final LabelAtom label = new LabelAtom(labelString);
 
         final List<QueueTaskFuture> rs = new ArrayList<>();
         for (int i = 0; i < count; i++) {
             final FreeStyleProject project = j.createFreeStyleProject();
             project.setAssignedLabel(label);
-            project.getBuildersList().add(Functions.isWindows() ? new BatchFile("Ping -n " + JOB_SLEEP_TIME + " 127.0.0.1 > nul") : new Shell("sleep " + JOB_SLEEP_TIME));
+            project.getBuildersList().add(Functions.isWindows() ? new BatchFile("Ping -n " + jobSleepTime + " 127.0.0.1 > nul") : new Shell("sleep " + jobSleepTime));
             rs.add(project.scheduleBuild2(0));
         }
 

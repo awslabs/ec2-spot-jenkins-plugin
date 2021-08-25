@@ -16,7 +16,7 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
 @RunWith(PowerMockRunner.class)
-@PrepareForTest({Jenkins.class})
+@PrepareForTest({Jenkins.class, Queue.class})
 public class EC2FleetNodeComputerTest {
 
     @Mock
@@ -34,7 +34,8 @@ public class EC2FleetNodeComputerTest {
     @Before
     public void before() {
         PowerMockito.mockStatic(Jenkins.class);
-        when(Jenkins.getInstance()).thenReturn(jenkins);
+        PowerMockito.mockStatic(Queue.class);
+        when(Jenkins.get()).thenReturn(jenkins);
         when(Queue.getInstance()).thenReturn(queue);
 
         when(slave.getNumExecutors()).thenReturn(1);

@@ -5,7 +5,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>3.56</version>
+    <version>4.24</version>
     <relativePath />
   </parent>
 
@@ -15,9 +15,9 @@
   <packaging>hpi</packaging>
 
   <properties>
-    <jenkins.version>2.112</jenkins.version>
+    <jenkins.version>2.235.5</jenkins.version>
     <java.level>8</java.level>
-    <configuration-as-code.version>1.14</configuration-as-code.version>
+    <configuration-as-code.version>1.51</configuration-as-code.version>
   </properties>
 
   <name>EC2 Fleet Jenkins Plugin</name>
@@ -32,19 +32,14 @@
 
   <developers>
     <developer>
-      <id>terma</id>
-      <name>Artem Stasiuk</name>
-      <email>artem.stasuk@gmail.com</email>
-    </developer>
-    <developer>
-      <id>schmutze</id>
-      <name>Chad Schmutzer</name>
-      <email>schmutze@amazon.com</email>
-    </developer>
-    <developer>
       <id>imuqtadir</id>
       <name>Abdul Muqtadir Mohammed</name>
       <email>imuqtadir23@gmail.com</email>
+    </developer>
+    <developer>
+      <id>haugenj</id>
+      <name>Jason Haugen</name>
+      <email>haugenj@amazon.com</email>
     </developer>
   </developers>
 
@@ -69,11 +64,21 @@
     </pluginRepository>
   </pluginRepositories>
 
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>io.jenkins.tools.bom</groupId>
+        <artifactId>bom-2.277.x</artifactId>
+        <version>918.vae501d2cdc99</version>
+        <scope>import</scope>
+        <type>pom</type>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
   <dependencies>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>credentials</artifactId>
-      <version>2.1.19</version>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
@@ -88,16 +93,9 @@
     <dependency>
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>ssh-slaves</artifactId>
-      <version>1.23</version>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jackson2-api</artifactId>
-      <version>2.7.3</version>
     </dependency>
 
     <!-- tests -->
-
     <dependency>
       <groupId>org.powermock</groupId>
       <artifactId>powermock-module-junit4</artifactId>
@@ -130,25 +128,21 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>io.jenkins</groupId>
-      <artifactId>configuration-as-code</artifactId>
-      <version>${configuration-as-code.version}</version>
-      <classifier>tests</classifier>
-      <scope>test</scope>
-    </dependency>
-
-    <!-- before jenkins 2.112 this plugin was part of jenkins core -->
-    <dependency>
       <groupId>io.jenkins.configuration-as-code</groupId>
-      <artifactId>configuration-as-code-support</artifactId>
+      <artifactId>test-harness</artifactId>
       <version>${configuration-as-code.version}</version>
       <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.jenkins-ci.plugins</groupId>
-      <artifactId>jdk-tool</artifactId>
-      <version>1.4</version>
-      <scope>test</scope>
+      <!--
+      PCT fails on maven-enforcer-plugin:enforce
+      test-harness:1.46 puts joda-time:2.10.2
+      aws-java-sdk:1.11.821 puts 2.8.1
+      -->
+      <exclusions>
+        <exclusion>
+          <groupId>joda-time</groupId>
+          <artifactId>joda-time</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
 
   </dependencies>
@@ -156,11 +150,13 @@
   <build>
     <plugins>
       <plugin>
-        <!-- Disabling FindBugs failOnError temporarily -->
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>findbugs-maven-plugin</artifactId>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <extensions>true</extensions>
         <configuration>
-          <failOnError>false</failOnError>
+          <compatibleSinceVersion>1.45</compatibleSinceVersion>
+          <pluginFirstClassLoader>true</pluginFirstClassLoader>
+          <minimumJavaVersion>8</minimumJavaVersion>
         </configuration>
       </plugin>
     </plugins>

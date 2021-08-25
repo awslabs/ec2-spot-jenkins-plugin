@@ -645,7 +645,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
         // Initialize our retention strategy
         node.setRetentionStrategy(new EC2RetentionStrategy());
 
-        final Jenkins jenkins = Jenkins.getInstance();
+        final Jenkins jenkins = Jenkins.get();
         // jenkins automatically remove old node with same name if any
         jenkins.addNode(node);
 
@@ -814,11 +814,11 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
         }
 
         public List getComputerConnectorDescriptors() {
-            return Jenkins.getInstance().getDescriptorList(ComputerConnector.class);
+            return Jenkins.get().getDescriptorList(ComputerConnector.class);
         }
 
         public ListBoxModel doFillAwsCredentialsIdItems() {
-            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.getInstance());
+            return AWSCredentialsHelper.doFillCredentialsIdItems(Jenkins.get());
         }
 
         public ListBoxModel doFillRegionItems(@QueryParameter final String awsCredentialsId) {

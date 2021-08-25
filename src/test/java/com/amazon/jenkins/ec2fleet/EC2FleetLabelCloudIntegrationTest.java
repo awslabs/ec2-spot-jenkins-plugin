@@ -38,7 +38,7 @@ public class EC2FleetLabelCloudIntegrationTest extends IntegrationTest {
 
         // set max size to > 0 otherwise nothing to provision
         final String labelString = "FleetLabel_maxSize=1";
-        final List<QueueTaskFuture> rs = enqueTask(1, labelString);
+        final List<QueueTaskFuture> rs = enqueTask(1, labelString, JOB_SLEEP_TIME);
 
         Assert.assertEquals(0, j.jenkins.getNodes().size());
 
@@ -67,7 +67,7 @@ public class EC2FleetLabelCloudIntegrationTest extends IntegrationTest {
 
         // set max size to > 0 otherwise nothing to provision
         final String labelString = "FleetLabel_maxSize=1";
-        final List<QueueTaskFuture> rs = enqueTask(1, labelString);
+        final List<QueueTaskFuture> rs = enqueTask(1, labelString, JOB_SLEEP_TIME);
 
         // wait until tasks will be completed
         tryUntil(new Runnable() {

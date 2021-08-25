@@ -244,7 +244,7 @@ EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
 )
  
 // get Jenkins instance
-Jenkins jenkins = Jenkins.getInstance()
+Jenkins jenkins = Jenkins.get()
 // get credentials domain
 def domain = Domain.global()
 // get credentials store
