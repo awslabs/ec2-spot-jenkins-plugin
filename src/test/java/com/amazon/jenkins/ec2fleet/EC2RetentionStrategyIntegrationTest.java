@@ -105,7 +105,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
     @Test
     public void shouldNotTerminateExcessCapacityWhenNodeIsBusy() throws Exception {
         // Keep a busy queue
-        List<QueueTaskFuture> rs = enqueTask(10);
+        List<QueueTaskFuture> rs = enqueTask(10, 90);
         triggerSuggestReviewNow();
 
         final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
