@@ -40,8 +40,19 @@ public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloud
     @Nonnull
     @Override
     public String getDisplayName() {
+        if(cloud != null) {
+            final String displayName = String.format("%s %s", cloud.getDisplayName(), name);
+            final EC2FleetNode node = getNode();
+            if(node != null) {
+                final int totalUses = node.getMaxTotalUses();
+                if(totalUses != -1) {
+                    return String.format("%s Builds left: %d ", displayName, totalUses);
+                }
+            }
+            return displayName;
+        }
         // in some multi-thread edge cases cloud could be null for some time, just be ok with that
-        return (cloud == null ? "unknown fleet" : cloud.getDisplayName()) + " " + name;
+        return "unknown fleet" + " " + name;
     }
 
     /**
