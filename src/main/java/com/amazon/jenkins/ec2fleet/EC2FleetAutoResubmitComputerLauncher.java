@@ -4,6 +4,7 @@ import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
 import hudson.model.Action;
 import hudson.model.Actionable;
 import hudson.model.Executor;
+import hudson.model.ParametersAction;
 import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.TaskListener;
@@ -11,6 +12,8 @@ import hudson.model.queue.SubTask;
 import hudson.slaves.ComputerLauncher;
 import hudson.slaves.DelegatingComputerLauncher;
 import hudson.slaves.SlaveComputer;
+import org.jenkinsci.plugins.workflow.job.WorkflowJob;
+import org.jenkinsci.plugins.workflow.job.WorkflowRun;
 
 import javax.annotation.concurrent.ThreadSafe;
 import java.util.ArrayList;
@@ -96,9 +99,13 @@ public class EC2FleetAutoResubmitComputerLauncher extends DelegatingComputerLaun
                     final SubTask subTask = executable.getParent();
                     final Queue.Task task = subTask.getOwnerTask();
 
-                    List<Action> actions = new ArrayList<>();
+                    final List<Action> actions = new ArrayList<>();
+                    if (task instanceof WorkflowJob) {
+                        final WorkflowRun failedBuild = ((WorkflowJob) task).getLastBuild();
+                        actions.addAll(failedBuild.getActions(ParametersAction.class));
+                    }
                     if (executable instanceof Actionable) {
-                        actions = ((Actionable) executable).getActions();
+                        actions.addAll(((Actionable) executable).getActions());
                     }
                     LOGGER.log(LOG_LEVEL, "RETRIGGERING: " + task + " - WITH ACTIONS: " + actions);
                     Queue.getInstance().schedule2(task, RESCHEDULE_QUIET_PERIOD_SEC, actions);
