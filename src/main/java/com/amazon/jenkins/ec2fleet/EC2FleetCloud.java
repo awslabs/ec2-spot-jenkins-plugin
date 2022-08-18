@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
@@ -850,6 +851,11 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                 if (computer instanceof EC2FleetNodeComputer && !computer.isIdle()) {
                     final Node compNode = computer.getNode();
                     if (compNode == null) {
+                        continue;
+                    }
+
+                    // Do not count computer if it is not a part of the given fleet
+                    if (!Objects.equals(((EC2FleetNodeComputer) computer).getCloud().getFleet(), currentState.getFleetId())) {
                         continue;
                     }
                     currentBusyInstances++;
