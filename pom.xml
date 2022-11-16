@@ -47,6 +47,11 @@
       <name>Prathibha Datta-Kumar</name>
       <email>kprathib@amazon.com</email>
     </developer>
+    <developer>
+      <id>cjerad</id>
+      <name>Jerad C</name>
+      <email>jeradc@amazon.com</email>
+    </developer>
   </developers>
 
   <scm>
