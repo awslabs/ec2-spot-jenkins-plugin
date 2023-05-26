@@ -29,6 +29,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -391,7 +392,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     }
 
     @Override
-    public synchronized Collection<NodeProvisioner.PlannedNode> provision(final Label label, final int excessWorkload) {
+    public synchronized Collection<NodeProvisioner.PlannedNode> provision(@Nonnull final Cloud.CloudState cloudState, final int excessWorkload) {
         fine("excessWorkload %s", excessWorkload);
 
         if (stats == null) {
@@ -726,7 +727,8 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     }
 
     @Override
-    public boolean canProvision(final Label label) {
+    public boolean canProvision(final Cloud.CloudState cloudState) {
+        final Label label = cloudState.getLabel();
         fine("CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\".");
         if (fleet == null) {
             fine("Fleet/ASG for cloud is null, returning false");

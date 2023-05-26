@@ -52,7 +52,7 @@ public class EC2FleetCloudAwareUtilsTest {
         PowerMockito.mockStatic(LabelFinder.class);
 
         PowerMockito.mockStatic(Jenkins.class);
-        PowerMockito.when(Jenkins.getActiveInstance()).thenReturn(jenkins);
+        PowerMockito.when(Jenkins.get()).thenReturn(jenkins);
 
         when(oldCloud.getOldId()).thenReturn("cloud");
         when(computer.getCloud()).thenReturn(oldCloud);

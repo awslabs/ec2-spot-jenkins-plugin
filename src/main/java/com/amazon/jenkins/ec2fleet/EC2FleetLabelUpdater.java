@@ -23,7 +23,7 @@ public class EC2FleetLabelUpdater extends PeriodicWork {
 
     @Override
     protected void doRun() {
-        for (Cloud cloud : Jenkins.getActiveInstance().clouds) {
+        for (Cloud cloud : Jenkins.get().clouds) {
             if (!(cloud instanceof EC2FleetLabelCloud)) continue;
             final EC2FleetLabelCloud ec2FleetLabelCloud = (EC2FleetLabelCloud) cloud;
             try {

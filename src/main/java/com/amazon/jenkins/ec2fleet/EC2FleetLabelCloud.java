@@ -35,6 +35,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
@@ -292,9 +293,10 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
 //    }
 
     @Override
-    public synchronized Collection<NodeProvisioner.PlannedNode> provision(final Label label, int excessWorkload) {
+    public synchronized Collection<NodeProvisioner.PlannedNode> provision(@Nonnull final Cloud.CloudState cloudState, int excessWorkload) {
         info("excessWorkload %s", excessWorkload);
 
+        final Label label = cloudState.getLabel();
         List<NodeProvisioner.PlannedNode> r = new ArrayList<>();
 
         for (Map.Entry<String, State> state : states.entrySet()) {
@@ -421,7 +423,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
     }
 
     private void updateByState(final Map<String, State> states) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
 
         final AmazonEC2 ec2 = Registry.getEc2Api().connect(getAwsCredentialsId(), region, endpoint);
 
@@ -563,7 +565,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
     public synchronized boolean scheduleToTerminate(final String instanceId, boolean force) {
         info("Attempting to terminate instance: %s", instanceId);
 
-        final Node node = Jenkins.getActiveInstance().getNode(instanceId);
+        final Node node = Jenkins.get().getNode(instanceId);
         if (node == null) return false;
 
         final State state = states.get(node.getLabelString());
@@ -586,7 +588,8 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
 
     // sync as we are using modifyable state
     @Override
-    public synchronized boolean canProvision(final Label label) {
+    public synchronized boolean canProvision(final Cloud.CloudState cloudState) {
+        final Label label = cloudState.getLabel();
         for (String labelString : states.keySet()) {
             final boolean r = label == null || Label.parse(labelString).containsAll(label.listAtoms());
             fine("CanProvision called on fleet: \"" + labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\". Returning " + r + ".");
@@ -713,14 +716,14 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
 //            ec2KeyPairName = result.getKeyPair().getKeyName();
 //        }
 
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         final CloudFormationApi cloudFormationApi = Registry.getCloudFormationApi();
         final AmazonCloudFormation client = cloudFormationApi.connect(awsCredentialsId, region, endpoint);
         final Map<String, CloudFormationApi.StackInfo> allStacks = cloudFormationApi.describe(client, name);
 
         // labels
         final Set<String> labels = new HashSet<>();
-        for (final Item item : Jenkins.getActiveInstance().getAllItems()) {
+        for (final Item item : Jenkins.get().getAllItems()) {
             if (!(item instanceof AbstractProject)) continue;
             final AbstractProject abstractProject = (AbstractProject) item;
             // assinged label could be null

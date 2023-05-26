@@ -1,6 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
-import hudson.model.Label;
+import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProvisioner;
 
@@ -27,8 +27,8 @@ public class EC2FleetCloudWithHistory extends EC2FleetCloud {
 
     @Override
     public Collection<NodeProvisioner.PlannedNode> provision(
-            final Label label, final int excessWorkload) {
-        final Collection<NodeProvisioner.PlannedNode> r = super.provision(label, excessWorkload);
+            final Cloud.CloudState cloudState, final int excessWorkload) {
+        final Collection<NodeProvisioner.PlannedNode> r = super.provision(cloudState, excessWorkload);
         for (NodeProvisioner.PlannedNode ignore : r) provisionTimes.add(System.currentTimeMillis());
         return r;
     }

@@ -30,7 +30,7 @@ public final class AWSUtils {
                 .withRetryPolicy(PredefinedRetryPolicies.getDefaultRetryPolicyWithCustomMaxRetries(MAX_ERROR_RETRY));
         clientConfiguration.setUserAgentPrefix(USER_AGENT_PREFIX);
 
-        final ProxyConfiguration proxyConfig = Jenkins.getActiveInstance().proxy;
+        final ProxyConfiguration proxyConfig = Jenkins.get().proxy;
         if (proxyConfig != null) {
             Proxy proxy;
             try {
@@ -46,7 +46,7 @@ public final class AWSUtils {
                 clientConfiguration.setProxyPort(address.getPort());
                 if (null != proxyConfig.getUserName()) {
                     clientConfiguration.setProxyUsername(proxyConfig.getUserName());
-                    clientConfiguration.setProxyPassword(proxyConfig.getPassword());
+                    clientConfiguration.setProxyPassword(proxyConfig.getSecretPassword().getPlainText());
                 }
             }
         }

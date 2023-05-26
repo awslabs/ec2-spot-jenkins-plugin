@@ -22,6 +22,7 @@ import hudson.model.Label;
 import hudson.model.LabelFinder;
 import hudson.model.Node;
 import hudson.model.labels.LabelAtom;
+import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProvisioner;
 import hudson.util.FormValidation;
@@ -154,7 +155,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         Label label = new LabelAtom("momo");
-        boolean result = fleetCloud.canProvision(label);
+        boolean result = fleetCloud.canProvision(new Cloud.CloudState(label, 0));
         Assert.assertFalse(result);
     }
 
@@ -167,7 +168,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         Label label = null;
-        boolean result = fleetCloud.canProvision(label);
+        boolean result = fleetCloud.canProvision(new Cloud.CloudState(label, 0));
         Assert.assertFalse(result);
     }
 
@@ -180,7 +181,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         Label label = new LabelAtom("momo");
-        boolean result = fleetCloud.canProvision(label);
+        boolean result = fleetCloud.canProvision(new Cloud.CloudState(label, 0));
         Assert.assertFalse(result);
     }
 
@@ -197,7 +198,7 @@ public class EC2FleetCloudTest {
         when(jenkins.getLabelAtom("label1")).thenReturn(new LabelAtom("label1"));
 
         Label label = new LabelAtom("momo");
-        boolean result = fleetCloud.canProvision(label);
+        boolean result = fleetCloud.canProvision(new Cloud.CloudState(label, 0));
         Assert.assertTrue(result);
     }
 
@@ -220,7 +221,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // then
         assertEquals(0, r.size());
@@ -246,7 +247,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 50);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 50);
 
         // then
         assertEquals(7, r.size());
@@ -272,7 +273,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 50);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 50);
 
         // then
         assertEquals(1, r.size());
@@ -298,7 +299,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // then
         assertEquals(0, r.size());
@@ -324,7 +325,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // then
         assertEquals(1, r.size());
@@ -350,7 +351,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 10);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 10);
 
         // then
         assertEquals(5, r.size());
@@ -376,9 +377,9 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r1 = fleetCloud.provision(null, 2);
-        Collection<NodeProvisioner.PlannedNode> r2 = fleetCloud.provision(null, 2);
-        Collection<NodeProvisioner.PlannedNode> r3 = fleetCloud.provision(null, 5);
+        Collection<NodeProvisioner.PlannedNode> r1 = fleetCloud.provision(new Cloud.CloudState(null, 0), 2);
+        Collection<NodeProvisioner.PlannedNode> r2 = fleetCloud.provision(new Cloud.CloudState(null, 0), 2);
+        Collection<NodeProvisioner.PlannedNode> r3 = fleetCloud.provision(new Cloud.CloudState(null, 0), 5);
 
         // then
         assertEquals(2, r1.size());
@@ -403,7 +404,7 @@ public class EC2FleetCloudTest {
                 10, false);
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // then
         assertEquals(0, r.size());
@@ -634,7 +635,7 @@ public class EC2FleetCloudTest {
         fleetCloud.setStats(new FleetStateStats("", 0, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        fleetCloud.provision(null, 2);
+        fleetCloud.provision(new Cloud.CloudState(null, 0), 2);
 
         // when
         fleetCloud.update();
@@ -661,7 +662,7 @@ public class EC2FleetCloudTest {
 
         fleetCloud.setStats(currentState);
 
-        fleetCloud.provision(null, 2);
+        fleetCloud.provision(new Cloud.CloudState(null, 0), 2);
         fleetCloud.scheduleToTerminate("i-1", false);
 
         // when
@@ -691,9 +692,9 @@ public class EC2FleetCloudTest {
         fleetCloud.setStats(new FleetStateStats("", 5, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        for (int i = 0; i < 10; i++) fleetCloud.provision(null, 1);
+        for (int i = 0; i < 10; i++) fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
         for (int i = 0; i < 10; i++) fleetCloud.scheduleToTerminate("i-" + i, false);
-        for (int i = 0; i < 10; i++) fleetCloud.provision(null, 1);
+        for (int i = 0; i < 10; i++) fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // when
         fleetCloud.update();
@@ -722,7 +723,7 @@ public class EC2FleetCloudTest {
         fleetCloud.setStats(new FleetStateStats("", 5, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        for (int i = 0; i < 10; i++) fleetCloud.provision(null, 1);
+        for (int i = 0; i < 10; i++) fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
         for (int i = 0; i < 5; i++) fleetCloud.scheduleToTerminate("i-" + i, false);
 
         // when
@@ -1066,7 +1067,7 @@ public class EC2FleetCloudTest {
         doNothing().when(jenkins).addNode(any(Node.class));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> plannedNodes = fleetCloud.provision(null, 10);
+        Collection<NodeProvisioner.PlannedNode> plannedNodes = fleetCloud.provision(new Cloud.CloudState(null, 0), 10);
         Assert.assertEquals(10, plannedNodes.size());
         for (NodeProvisioner.PlannedNode plannedNode : plannedNodes) {
             Assert.assertFalse(plannedNode.future.isCancelled());
@@ -1113,13 +1114,13 @@ public class EC2FleetCloudTest {
 
         doNothing().when(jenkins).addNode(any(Node.class));
 
-        fleetCloud.provision(null, 1);
+        fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // intercept modify operation to emulate call of provision during update method
         doAnswer(new Answer() {
             @Override
             public Object answer(InvocationOnMock invocation) {
-                fleetCloud.provision(null, 1);
+                fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
                 return null;
             }
         }).when(ec2Fleet).modify(anyString(), anyString(), anyString(), anyString(), anyInt(), anyInt(), anyInt());
@@ -1165,7 +1166,7 @@ public class EC2FleetCloudTest {
 
         doNothing().when(jenkins).addNode(any(Node.class));
 
-        fleetCloud.provision(null, 2);
+        fleetCloud.provision(new Cloud.CloudState(null, 0), 2);
 
         // when
         fleetCloud.update();
@@ -1457,7 +1458,7 @@ public class EC2FleetCloudTest {
         fleetCloud.setStats(new FleetStateStats("", 0, FleetStateStats.State.active(),
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
         // run provision
-        fleetCloud.provision(null, 1);
+        fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
 
         // when
         try {
@@ -1581,7 +1582,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
         ScheduledFuture<?> scheduledFuture = fleetCloud.getPlannedNodeScheduledFutures().get(0);
 
         // sleep for a little more than the timeout to let the scheduled future execute
@@ -1612,7 +1613,7 @@ public class EC2FleetCloudTest {
                 Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
         // when
-        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(null, 1);
+        Collection<NodeProvisioner.PlannedNode> r = fleetCloud.provision(new Cloud.CloudState(null, 0), 1);
         ScheduledFuture<?> scheduledFuture = fleetCloud.getPlannedNodeScheduledFutures().get(0);
 
         // call update before the timeout expires

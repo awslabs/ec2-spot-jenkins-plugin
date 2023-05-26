@@ -35,6 +35,7 @@ import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Label;
 import hudson.model.Node;
+import hudson.model.Project;
 import hudson.model.Queue;
 import hudson.model.Result;
 import hudson.model.Run;
@@ -144,7 +145,7 @@ public abstract class IntegrationTest {
         tryUntil(new Runnable() {
             @Override
             public void run() {
-                final AbstractBuild lastBuild = j.jenkins.getProjects().get(0).getLastBuild();
+                final AbstractBuild lastBuild = j.jenkins.getAllItems(Project.class).get(0).getLastBuild();
                 System.out.println("wait until " + Arrays.toString(lastBuildResults) + " current state "
                         + (lastBuild == null ? "<none>" : lastBuild.getResult()));
                 Assert.assertNotNull(lastBuild);

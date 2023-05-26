@@ -16,11 +16,12 @@ import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
-import hudson.model.Label;
 import hudson.model.TaskListener;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.ComputerLauncher;
+import org.hamcrest.MatcherAssert;
 import org.hamcrest.Matchers;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -151,7 +152,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         Thread.sleep(TimeUnit.MINUTES.toMillis(2));
 
-        verify(cloud, times(1)).provision(any(Label.class), anyInt());
+        verify(cloud, times(1)).provision(any(Cloud.CloudState.class), anyInt());
 
         cancelTasks(rs);
     }
@@ -181,7 +182,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
             @Override
             public void run() {
                 j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
-                verify(cloud, atLeast(2)).provision(any(Label.class), anyInt());
+                verify(cloud, atLeast(2)).provision(any(Cloud.CloudState.class), anyInt());
             }
         });
     }
@@ -242,7 +243,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         cancelTasks(rs);
 
-        verify(cloud, times(1)).provision(any(Label.class), anyInt());
+        verify(cloud, times(1)).provision(any(Cloud.CloudState.class), anyInt());
     }
 
     @Test
@@ -344,7 +345,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
             @Override
             public void run() {
                 // defect in termination logic, that why 1
-                Assert.assertThat(j.jenkins.getLabel("momo").getNodes().size(), Matchers.lessThanOrEqualTo(1));
+                MatcherAssert.assertThat(j.jenkins.getLabel("momo").getNodes().size(), Matchers.lessThanOrEqualTo(1));
             }
         }, TimeUnit.MINUTES.toMillis(3));
 

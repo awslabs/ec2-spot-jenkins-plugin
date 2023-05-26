@@ -1,6 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
-import hudson.model.Label;
+import hudson.slaves.Cloud;
 import hudson.slaves.ComputerConnector;
 import hudson.slaves.NodeProvisioner;
 
@@ -28,9 +28,9 @@ public class EC2FleetCloudWithMeter extends EC2FleetCloud {
 
     @Override
     public Collection<NodeProvisioner.PlannedNode> provision(
-            final Label label, final int excessWorkload) {
+            final Cloud.CloudState cloudState, final int excessWorkload) {
         try (Meter.Shot s = provisionMeter.start()) {
-            return super.provision(label, excessWorkload);
+            return super.provision(cloudState, excessWorkload);
         }
     }
 

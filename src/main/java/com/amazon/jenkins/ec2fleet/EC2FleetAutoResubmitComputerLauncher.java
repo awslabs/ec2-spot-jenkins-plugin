@@ -105,7 +105,7 @@ public class EC2FleetAutoResubmitComputerLauncher extends DelegatingComputerLaun
                         actions.addAll(failedBuild.getActions(ParametersAction.class));
                     }
                     if (executable instanceof Actionable) {
-                        actions.addAll(((Actionable) executable).getActions());
+                        actions.addAll(((Actionable) executable).getAllActions());
                     }
                     LOGGER.log(LOG_LEVEL, "RETRIGGERING: " + task + " - WITH ACTIONS: " + actions);
                     Queue.getInstance().schedule2(task, RESCHEDULE_QUIET_PERIOD_SEC, actions);

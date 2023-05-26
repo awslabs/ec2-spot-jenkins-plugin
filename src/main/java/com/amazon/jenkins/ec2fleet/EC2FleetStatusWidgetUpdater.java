@@ -54,7 +54,7 @@ public class EC2FleetStatusWidgetUpdater extends PeriodicWork {
      * @return widgets
      */
     private static List<Widget> getWidgets() {
-        return Jenkins.getActiveInstance().getWidgets();
+        return Jenkins.get().getWidgets();
     }
 
     /**
@@ -64,7 +64,7 @@ public class EC2FleetStatusWidgetUpdater extends PeriodicWork {
      * @return basic java list
      */
     private static List<Cloud> getClouds() {
-        return Jenkins.getActiveInstance().clouds;
+        return Jenkins.get().clouds;
     }
 
 }

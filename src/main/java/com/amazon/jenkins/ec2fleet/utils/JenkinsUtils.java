@@ -6,7 +6,7 @@ import jenkins.model.Jenkins;
 public class JenkinsUtils {
 
     public static void removeNode(final String instanceId) {
-        final Jenkins jenkins = Jenkins.getActiveInstance();
+        final Jenkins jenkins = Jenkins.get();
         // If this node is dying, remove it from Jenkins
         final Node n = jenkins.getNode(instanceId);
         if (n != null) {

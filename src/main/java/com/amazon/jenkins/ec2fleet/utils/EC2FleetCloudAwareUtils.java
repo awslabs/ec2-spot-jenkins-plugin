@@ -19,16 +19,16 @@ public class EC2FleetCloudAwareUtils {
     private static final Logger LOGGER = Logger.getLogger(EC2FleetCloudAwareUtils.class.getName());
 
     public static void reassign(final @Nonnull String id, @Nonnull final AbstractEC2FleetCloud cloud) {
-        if (Jenkins.getActiveInstance() != null ) {
-            if (Jenkins.getActiveInstance().getComputers() != null) {
-                for (final Computer computer : Jenkins.getActiveInstance().getComputers()) {
+        if (Jenkins.get() != null ) {
+            if (Jenkins.get().getComputers() != null) {
+                for (final Computer computer : Jenkins.get().getComputers()) {
                     LOGGER.info("Trying to reassign Jenkins computer:" + computer.getDisplayName());
                     checkAndReassign(id, cloud, computer);
                 }
             }
 
-            if (Jenkins.getActiveInstance().getNodes() != null) {
-                for (final Node node : Jenkins.getActiveInstance().getNodes()) {
+            if (Jenkins.get().getNodes() != null) {
+                for (final Node node : Jenkins.get().getNodes()) {
                     LOGGER.info("Trying to reassign Jenkins node:" + node.getDisplayName());
                     checkAndReassign(id, cloud, node);
                 }

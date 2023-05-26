@@ -1,7 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
 import com.amazonaws.services.ec2.model.BatchState;
-import hudson.model.Label;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
@@ -68,7 +67,7 @@ public final class FleetStateStats {
 
         /**
          * Fleet is good to be used for plugin, it will be shown on UI as option to use
-         * and plugin will use it for provision {@link EC2FleetCloud#provision(Label, int)} ()} and de-provision
+         * and plugin will use it for provision {@link EC2FleetCloud#provision(hudson.slaves.Cloud.CloudState, int)} ()} and de-provision
          * otherwise activity will be ignored until state will not be updated.
          *
          * @return true or false

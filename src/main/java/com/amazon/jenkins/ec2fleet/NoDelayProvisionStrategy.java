@@ -8,7 +8,6 @@ import hudson.slaves.NodeProvisioner;
 import jenkins.model.Jenkins;
 
 import java.util.Collection;
-import java.util.Collections;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -55,7 +54,9 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
                         new Object[]{label, cloud.getDisplayName()});
                 continue;
             }
-            if (!cloud.canProvision(label)) {
+
+            Cloud.CloudState cloudState = new Cloud.CloudState(label, strategyState.getAdditionalPlannedCapacity());
+            if (!cloud.canProvision(cloudState)) {
                 LOGGER.log(Level.INFO, "label [{0}]: cloud {1} can not provision for this label, continuing...",
                         new Object[]{label, cloud.getDisplayName()});
                 continue;
@@ -70,7 +71,7 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
 
             LOGGER.log(Level.INFO, "label [{0}]: cloud {1} can provision for this label",
                     new Object[]{label, cloud.getDisplayName()});
-            final Collection<NodeProvisioner.PlannedNode> plannedNodes = cloud.provision(label, currentDemand);
+            final Collection<NodeProvisioner.PlannedNode> plannedNodes = cloud.provision(cloudState, currentDemand);
             for (NodeProvisioner.PlannedNode plannedNode : plannedNodes) {
                 currentDemand -= plannedNode.numExecutors;
             }

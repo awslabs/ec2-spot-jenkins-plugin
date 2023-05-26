@@ -67,7 +67,7 @@ public class CloudNanny extends PeriodicWork {
      * @return basic java list
      */
     private static List<Cloud> getClouds() {
-        return Jenkins.getActiveInstance().clouds;
+        return Jenkins.get().clouds;
     }
 
     private AtomicInteger getRecurrenceCounter(EC2FleetCloud fleetCloud) {
