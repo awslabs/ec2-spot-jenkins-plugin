@@ -30,63 +30,64 @@ public class NoDelayProvisionStrategy extends NodeProvisioner.Strategy {
         final Label label = strategyState.getLabel();
 
         final LoadStatistics.LoadStatisticsSnapshot snapshot = strategyState.getSnapshot();
-        final int availableCapacity =
-                snapshot.getAvailableExecutors()   // live executors
-                        + snapshot.getConnectingExecutors()  // executors present but not yet connected
-                        + strategyState.getPlannedCapacitySnapshot()     // capacity added by previous strategies from previous rounds
-                        + strategyState.getAdditionalPlannedCapacity();  // capacity added by previous strategies _this round_
+        final int availableCapacity = snapshot.getAvailableExecutors() // available executors
+                + strategyState.getPlannedCapacitySnapshot()     // capacity added by previous strategies from previous rounds
+                + strategyState.getAdditionalPlannedCapacity();  // capacity added by previous strategies _this round_
 
-        int currentDemand = snapshot.getQueueLength() - availableCapacity;
-        LOGGER.log(currentDemand < 1 ? Level.FINE : Level.INFO,
-                "label [{0}]: currentDemand {1} availableCapacity {2} (availableExecutors {3} connectingExecutors {4} plannedCapacitySnapshot {5} additionalPlannedCapacity {6})",
-                new Object[]{label, currentDemand, availableCapacity, snapshot.getAvailableExecutors(),
-                        snapshot.getConnectingExecutors(), strategyState.getPlannedCapacitySnapshot(),
-                        strategyState.getAdditionalPlannedCapacity()});
+        int qLen = snapshot.getQueueLength();
+        int excessWorkload = qLen - availableCapacity;
+        LOGGER.log(Level.FINE, "label [{0}]: queueLength {1} availableCapacity {2} (availableExecutors {3} plannedCapacitySnapshot {4} additionalPlannedCapacity {5})",
+                new Object[]{label, qLen, availableCapacity, snapshot.getAvailableExecutors(),
+                        strategyState.getPlannedCapacitySnapshot(), strategyState.getAdditionalPlannedCapacity()});
 
-        for (final Cloud cloud : getClouds()) {
-            if (currentDemand < 1) {
-                LOGGER.log(Level.FINE, "label [{0}]: currentDemand is less than 1, not provisioning", label);
+        if (excessWorkload <= 0) {
+            LOGGER.log(Level.INFO, "label [{0}]: No excess workload, provisioning not needed.", label);
+            return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
+        }
+
+        for (final Cloud c : getClouds()) {
+            if (excessWorkload < 1) {
                 break;
             }
 
-            if (!(cloud instanceof EC2FleetCloud)) {
+            if (!(c instanceof EC2FleetCloud)) {
                 LOGGER.log(Level.FINE, "label [{0}]: cloud {1} is not an EC2FleetCloud, continuing...",
-                        new Object[]{label, cloud.getDisplayName()});
+                        new Object[]{label, c.getDisplayName()});
                 continue;
             }
 
             Cloud.CloudState cloudState = new Cloud.CloudState(label, strategyState.getAdditionalPlannedCapacity());
-            if (!cloud.canProvision(cloudState)) {
+            if (!c.canProvision(cloudState)) {
                 LOGGER.log(Level.INFO, "label [{0}]: cloud {1} can not provision for this label, continuing...",
-                        new Object[]{label, cloud.getDisplayName()});
+                        new Object[]{label, c.getDisplayName()});
                 continue;
             }
 
-            final EC2FleetCloud ec2 = (EC2FleetCloud) cloud;
-            if (!ec2.isNoDelayProvision()) {
+            if (!((EC2FleetCloud) c).isNoDelayProvision()) {
                 LOGGER.log(Level.FINE, "label [{0}]: cloud {1} does not use No Delay Provision Strategy, continuing...",
-                        new Object[]{label, cloud.getDisplayName()});
+                        new Object[]{label, c.getDisplayName()});
                 continue;
             }
 
-            LOGGER.log(Level.INFO, "label [{0}]: cloud {1} can provision for this label",
-                    new Object[]{label, cloud.getDisplayName()});
-            final Collection<NodeProvisioner.PlannedNode> plannedNodes = cloud.provision(cloudState, currentDemand);
-            for (NodeProvisioner.PlannedNode plannedNode : plannedNodes) {
-                currentDemand -= plannedNode.numExecutors;
+            LOGGER.log(Level.FINE, "label [{0}]: cloud {1} can provision for this label",
+                    new Object[]{label, c.getDisplayName()});
+            final Collection<NodeProvisioner.PlannedNode> plannedNodes = c.provision(cloudState, excessWorkload);
+            for (NodeProvisioner.PlannedNode pn : plannedNodes) {
+                excessWorkload -= pn.numExecutors;
+                LOGGER.log(Level.INFO, "Started provisioning {0} from {1} with {2,number,integer} "
+                                + "executors. Remaining excess workload: {3,number,#.###}",
+                        new Object[]{pn.displayName, c.name, pn.numExecutors, excessWorkload});
             }
-            LOGGER.log(Level.FINE, "Planned {0} new nodes", plannedNodes.size());
             strategyState.recordPendingLaunches(plannedNodes);
-            LOGGER.log(Level.FINE, "After provisioning currentDemand={0}", new Object[]{currentDemand});
         }
 
-        if (currentDemand < 1) {
-            LOGGER.log(Level.FINE, "Provisioning completed");
-            return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
-        } else {
+        if (excessWorkload > 0) {
             LOGGER.log(Level.FINE, "Provisioning not complete, consulting remaining strategies");
             return NodeProvisioner.StrategyDecision.CONSULT_REMAINING_STRATEGIES;
         }
+
+        LOGGER.log(Level.FINE, "Provisioning completed");
+        return NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED;
     }
 
     // Visible for testing

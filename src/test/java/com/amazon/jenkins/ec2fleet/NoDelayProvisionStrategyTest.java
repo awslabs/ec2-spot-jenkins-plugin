@@ -221,4 +221,32 @@ public class NoDelayProvisionStrategyTest {
         verify(ec2FleetCloud1, times(1)).provision(any(Cloud.CloudState.class), eq(2));
     }
 
+    @Test
+    public void givenPlannedCapacity_shouldComputeExcessWorkloadCorrectly() {
+        when(snapshot.getQueueLength()).thenReturn(6);
+        when(snapshot.getAvailableExecutors()).thenReturn(0);
+        when(state.getPlannedCapacitySnapshot()).thenReturn(3);
+        when(state.getLabel()).thenReturn(label);
+
+        final EC2FleetCloud ec2FleetCloud1 = mock(EC2FleetCloud.class);
+        clouds.add(ec2FleetCloud1);
+        when(ec2FleetCloud1.canProvision(any(Cloud.CloudState.class))).thenReturn(true);
+        when(ec2FleetCloud1.isNoDelayProvision()).thenReturn(true);
+        final NodeProvisioner.PlannedNode plannedNode1 = new NodeProvisioner.PlannedNode("fc1-0", new CompletableFuture<>(), 2);
+        when(ec2FleetCloud1.provision(any(Cloud.CloudState.class), anyInt())).thenReturn(Arrays.asList(plannedNode1));
+
+        final EC2FleetCloud ec2FleetCloud2 = mock(EC2FleetCloud.class);
+        clouds.add(ec2FleetCloud2);
+        when(ec2FleetCloud2.canProvision(any(Cloud.CloudState.class))).thenReturn(true);
+        when(ec2FleetCloud2.isNoDelayProvision()).thenReturn(true);
+        final NodeProvisioner.PlannedNode plannedNode2 = new NodeProvisioner.PlannedNode("fc2-0", new CompletableFuture<>(), 1);
+        when(ec2FleetCloud2.provision(any(Cloud.CloudState.class), anyInt())).thenReturn(Arrays.asList(plannedNode2));
+
+        final NodeProvisioner.StrategyDecision decision = strategy.apply(state);
+
+        Assert.assertEquals(NodeProvisioner.StrategyDecision.PROVISIONING_COMPLETED, decision);
+        verify(ec2FleetCloud1, times(1)).provision(any(Cloud.CloudState.class), eq(3));
+        verify(ec2FleetCloud2, times(1)).provision(any(Cloud.CloudState.class), eq(1));
+    }
+
 }
