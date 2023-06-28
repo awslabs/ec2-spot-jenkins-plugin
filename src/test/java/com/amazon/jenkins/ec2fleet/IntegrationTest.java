@@ -30,6 +30,9 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfig;
 import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
+import com.gargoylesoftware.htmlunit.html.DomElement;
+import com.gargoylesoftware.htmlunit.html.HtmlForm;
+import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import hudson.Functions;
 import hudson.model.AbstractBuild;
 import hudson.model.FreeStyleProject;
@@ -54,6 +57,7 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.xml.sax.SAXException;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -527,4 +531,14 @@ public abstract class IntegrationTest {
         });
     }
 
+    public static List<DomElement> getElementsByNameWithoutJdk(HtmlPage page, String name) {
+        String jdkCheckUrl = "/jenkins/descriptorByName/hudson.model.JDK/checkName";
+        List<DomElement> r = new ArrayList<>();
+        for (DomElement domElement : page.getElementsByName(name)) {
+            if (!jdkCheckUrl.equals(domElement.getAttribute("checkurl"))) {
+                r.add(domElement);
+            }
+        }
+        return r;
+    }
 }

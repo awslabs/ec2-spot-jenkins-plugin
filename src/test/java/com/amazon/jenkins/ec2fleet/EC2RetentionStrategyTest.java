@@ -6,6 +6,7 @@ import hudson.slaves.SlaveComputer;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
@@ -17,9 +18,9 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -47,12 +48,18 @@ public class EC2RetentionStrategyTest {
     @Before
     public void before() {
         when(cloud.getIdleMinutes()).thenReturn(10);
+        when(cloud.hasUnlimitedUsesForNodes()).thenReturn(true);
+        when(cloud.isAlwaysReconnect()).thenReturn(false);
+
         PowerMockito.when(computer.getIdleStartMilliseconds()).thenReturn(System.currentTimeMillis() - TimeUnit.MINUTES.toMillis(11));
         when(computer.getNode()).thenReturn(node);
         PowerMockito.when(computer.isIdle()).thenReturn(true);
-        when(node.getNodeName()).thenReturn("n-a");
         when(computer.isAcceptingTasks()).thenReturn(true);
         when(computer.getCloud()).thenReturn(cloud);
+        when(computer.isMarkedForDeletion()).thenReturn(false);
+
+        when(node.getNodeName()).thenReturn("n-a");
+
         when(executor.getOwner()).thenReturn(computer);
     }
 
@@ -62,48 +69,73 @@ public class EC2RetentionStrategyTest {
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(0)).getNode();
-        verify(cloud, times(0)).scheduleToTerminate(anyString(), anyBoolean(), eq(EC2AgentTerminationReason.IDLE_FOR_TOO_LONG));
-        verify(computer).setAcceptingTasks(false);
-        verify(computer).setAcceptingTasks(true);
+        verify(computer).getNode();
+        verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), eq(EC2AgentTerminationReason.IDLE_FOR_TOO_LONG));
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
-    public void shouldScheduleExcessCapacityForTerminationIfIdle() {
+    public void should_schedule_agent_for_termination_if_marked() {
         when(computer.isIdle()).thenReturn(Boolean.TRUE);
-        when(cloud.hasExcessCapacity()).thenReturn(Boolean.TRUE);
-        when(cloud.getIdleMinutes()).thenReturn(20);
+        when(computer.isMarkedForDeletion()).thenReturn(Boolean.TRUE);
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(1)).getNode();
-        verify(cloud, times(1)).scheduleToTerminate(anyString(), anyBoolean(), eq(EC2AgentTerminationReason.EXCESS_CAPACITY));
+        verify(computer).getNode();
+        verify(cloud).scheduleToTerminate(anyString(), eq(false), eq(EC2AgentTerminationReason.AGENT_DELETED));
         verify(computer).setAcceptingTasks(false);
     }
 
     @Test
-    public void shouldNotScheduleExcessCapacityForTerminationIfBusy() {
+    public void should_schedule_for_termination_if_excess_capacity() {
+        when(computer.isIdle()).thenReturn(Boolean.TRUE);
+        when(computer.isMarkedForDeletion()).thenReturn(Boolean.FALSE);
         when(cloud.hasExcessCapacity()).thenReturn(Boolean.TRUE);
-        when(computer.isIdle()).thenReturn(Boolean.FALSE);
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(0)).getNode();
-        verify(cloud, times(0)).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
-        verify(computer).setAcceptingTasks(true);
+        verify(computer).getNode();
+        verify(cloud).scheduleToTerminate(anyString(), eq(false), eq(EC2AgentTerminationReason.EXCESS_CAPACITY));
+        verify(computer).setAcceptingTasks(false);
     }
 
     @Test
-    public void shouldNotScheduleTerminationIfNotExcessCapacity() {
+    public void should_schedule_for_termination_if_node_has_exhausted_maxTotalUses() {
+        when(computer.isIdle()).thenReturn(Boolean.TRUE);
+        when(computer.isMarkedForDeletion()).thenReturn(Boolean.FALSE);
         when(cloud.hasExcessCapacity()).thenReturn(Boolean.FALSE);
-        when(computer.isIdle()).thenReturn(Boolean.TRUE);
-        when(cloud.getIdleMinutes()).thenReturn(0);
+        when(cloud.hasUnlimitedUsesForNodes()).thenReturn(Boolean.FALSE);
+        when(node.getUsesRemaining()).thenReturn(0);
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(0)).getNode();
-        verify(cloud, times(0)).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
-        verify(computer).setAcceptingTasks(true);
+        verify(computer).getNode();
+        verify(computer).isMarkedForDeletion();
+        verify(cloud).hasExcessCapacity();
+        verify(cloud).hasUnlimitedUsesForNodes();
+        verify(node).getUsesRemaining();
+        verify(cloud, never()).getIdleMinutes();
+        verify(cloud).scheduleToTerminate(anyString(), eq(true), eq(EC2AgentTerminationReason.MAX_TOTAL_USES_EXHAUSTED));
+        verify(computer).setAcceptingTasks(false);
+    }
+
+    @Test
+    public void should_schedule_for_termination_if_idle_for_too_long() {
+        when(computer.isIdle()).thenReturn(Boolean.TRUE);
+        when(computer.isMarkedForDeletion()).thenReturn(Boolean.FALSE);
+        when(cloud.hasExcessCapacity()).thenReturn(Boolean.FALSE);
+        when(cloud.hasUnlimitedUsesForNodes()).thenReturn(Boolean.FALSE);
+        when(node.getUsesRemaining()).thenReturn(1);
+        when(cloud.getIdleMinutes()).thenReturn(10);
+
+        new EC2RetentionStrategy().check(computer);
+
+        verify(computer).getNode();
+        verify(cloud).scheduleToTerminate(anyString(), eq(false), eq(EC2AgentTerminationReason.IDLE_FOR_TOO_LONG));
+        verify(computer).setAcceptingTasks(false);
     }
 
     @Test
@@ -116,20 +148,56 @@ public class EC2RetentionStrategyTest {
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(1)).getNode();
+        verify(computer).getNode();
         verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
     }
 
     @Test
-    public void if_idle_time_configured_should_do_nothing_if_node_idle_less_time() {
-        when(computer.getIdleStartMilliseconds()).thenReturn(System.currentTimeMillis());
+    public void should_NOT_schedule_for_termination_if_busy() {
+        when(computer.isIdle()).thenReturn(Boolean.FALSE);
 
         new EC2RetentionStrategy().check(computer);
 
         verify(computer, never()).getNode();
         verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
-        verify(computer).setAcceptingTasks(false);
-        verify(computer).setAcceptingTasks(true);
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
+    }
+    
+    @Test
+    public void should_NOT_schedule_for_termination_if_no_conditions_apply() {
+        when(computer.isIdle()).thenReturn(Boolean.TRUE);
+        when(computer.isMarkedForDeletion()).thenReturn(Boolean.FALSE);
+        when(cloud.hasExcessCapacity()).thenReturn(Boolean.FALSE);
+        when(cloud.hasUnlimitedUsesForNodes()).thenReturn(Boolean.TRUE);
+        when(cloud.getIdleMinutes()).thenReturn(0);
+
+        new EC2RetentionStrategy().check(computer);
+
+
+        verify(computer).getNode();
+        verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
+    }
+
+    @Test
+    public void if_idle_time_configured_should_do_nothing_if_node_not_idle_for_too_long() {
+        when(computer.getIdleStartMilliseconds()).thenReturn(System.currentTimeMillis());
+
+        new EC2RetentionStrategy().check(computer);
+
+        verify(computer).isIdle();
+        verify(computer).getNode();
+        verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
@@ -138,19 +206,23 @@ public class EC2RetentionStrategyTest {
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(computer, times(0)).getNode();
-        verify(cloud, times(0)).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
-        verify(computer).setAcceptingTasks(false);
-        verify(computer).setAcceptingTasks(true);
+        verify(computer).getNode();
+        verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
     public void if_idle_time_configured_should_terminate_node_if_idle_time_more_then_allowed() {
         new EC2RetentionStrategy().check(computer);
 
-        verify(cloud, times(1)).scheduleToTerminate("n-a", false, EC2AgentTerminationReason.IDLE_FOR_TOO_LONG);
-        verify(computer, times(1)).setAcceptingTasks(true);
-        verify(computer, times(1)).setAcceptingTasks(false);
+        verify(cloud).scheduleToTerminate("n-a", false, EC2AgentTerminationReason.IDLE_FOR_TOO_LONG);
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
@@ -159,9 +231,8 @@ public class EC2RetentionStrategyTest {
 
         new EC2RetentionStrategy().check(computer);
 
-        verify(cloud, times(0)).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
-        verify(computer, times(0)).setAcceptingTasks(true);
-        verify(computer, times(0)).setAcceptingTasks(false);
+        verify(cloud, never()).scheduleToTerminate(anyString(), anyBoolean(), any(EC2AgentTerminationReason.class));
+        verify(computer, never()).setAcceptingTasks(anyBoolean());
     }
 
     @Test
@@ -172,8 +243,10 @@ public class EC2RetentionStrategyTest {
         new EC2RetentionStrategy().check(computer);
 
         verify(cloud, never()).scheduleToTerminate(eq("n-a"), eq(false), any(EC2AgentTerminationReason.class));
-        verify(computer, times(1)).setAcceptingTasks(true);
-        verify(computer, times(1)).setAcceptingTasks(false);
+
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
@@ -183,8 +256,9 @@ public class EC2RetentionStrategyTest {
         new EC2RetentionStrategy().check(computer);
 
         verify(cloud, never()).scheduleToTerminate(eq("n-a"), eq(false), any(EC2AgentTerminationReason.class));
-        verify(computer, times(1)).setAcceptingTasks(true);
-        verify(computer, times(1)).setAcceptingTasks(false);
+        InOrder inOrder = inOrder(computer);
+        inOrder.verify(computer).setAcceptingTasks(false);
+        inOrder.verify(computer).setAcceptingTasks(true);
     }
 
     @Test
@@ -196,39 +270,58 @@ public class EC2RetentionStrategyTest {
             fail();
         } catch (IllegalArgumentException e) {
             assertEquals("test", e.getMessage());
-            verify(cloud, times(1)).scheduleToTerminate(eq("n-a"), eq(false), any(EC2AgentTerminationReason.class));
-            verify(computer).setAcceptingTasks(false);
-            verify(computer).setAcceptingTasks(true);
+            verify(cloud).scheduleToTerminate(eq("n-a"), eq(false), any(EC2AgentTerminationReason.class));
+            InOrder inOrder = inOrder(computer);
+            inOrder.verify(computer).setAcceptingTasks(false);
+            inOrder.verify(computer).setAcceptingTasks(true);
         }
     }
 
     @Test
-    public void when_unlimited_maxTotalUses_should_not_decrement() {
+    public void when_unlimited_maxTotalUses_should_not_decrement_nor_suspend_computer() {
         when(node.getMaxTotalUses()).thenReturn(-1);
 
         new EC2RetentionStrategy().taskAccepted(executor, task);
 
+        verify(computer).getNode();
         verify(computer, never()).setAcceptingTasks(false);
     }
 
     @Test
-    public void when_maxTotalUses_greater_than_1_should_decrement() {
+    public void when_limited_maxTotalUses_and_more_than_one_remainingUses_should_decrement_only() {
         when(node.getMaxTotalUses()).thenReturn(2);
+        when(node.getUsesRemaining()).thenReturn(2);
 
         new EC2RetentionStrategy().taskAccepted(executor, task);
 
-        verify(node).setMaxTotalUses(1);
+        verify(computer).getNode();
+        verify(node, times(2)).getUsesRemaining();
+        verify(node).decrementUsesRemaining();
         verify(computer, never()).setAcceptingTasks(false);
     }
 
     @Test
-    public void when_maxTotalUses_is_1_should_stop_accepting_tasks_and_not_decrement() {
-        when(node.getMaxTotalUses()).thenReturn(1);
+    public void when_limited_maxTotalUses_and_usesRemaining_is_1_should_decrement_and_stop_accepting_tasks() {
+        when(node.getMaxTotalUses()).thenReturn(2);
+        when(node.getUsesRemaining()).thenReturn(1);
 
         new EC2RetentionStrategy().taskAccepted(executor, task);
 
-        verify(computer, times(1)).setAcceptingTasks(false);
-        verify(node, never()).setMaxTotalUses(anyInt());
+        verify(computer).getNode();
+        verify(computer).setAcceptingTasks(false);
+        verify(node).decrementUsesRemaining();
+    }
+
+    @Test
+    public void when_limited_maxTotalUses_and_usesRemaining_is_0_do_nothing() {
+        when(node.getMaxTotalUses()).thenReturn(5);
+        when(node.getUsesRemaining()).thenReturn(0);
+
+        new EC2RetentionStrategy().taskAccepted(executor, task);
+
+        verify(computer).getNode();
+        verify(node, never()).decrementUsesRemaining();
+        verify(computer, never()).setAcceptingTasks(false);
     }
 
     @Test
@@ -260,6 +353,6 @@ public class EC2RetentionStrategyTest {
 
         new EC2RetentionStrategy().taskCompleted(executor, task, 0L);
 
-        verify(cloud, times(1)).scheduleToTerminate("n-a", true, EC2AgentTerminationReason.MAX_TOTAL_USES_EXHAUSTED);
+        verify(cloud).scheduleToTerminate("n-a", true, EC2AgentTerminationReason.MAX_TOTAL_USES_EXHAUSTED);
     }
 }

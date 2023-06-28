@@ -17,13 +17,18 @@ import java.io.IOException;
 public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloudAware {
 
     private final String name;
-
     private volatile AbstractEC2FleetCloud cloud;
+    private boolean isMarkedForDeletion;
 
     public EC2FleetNodeComputer(final Slave slave, @Nonnull final String name, @Nonnull final AbstractEC2FleetCloud cloud) {
         super(slave);
         this.name = name;
         this.cloud = cloud;
+        this.isMarkedForDeletion = false;
+    }
+
+    public boolean isMarkedForDeletion() {
+        return isMarkedForDeletion;
     }
 
     @Override
@@ -44,9 +49,9 @@ public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloud
             final String displayName = String.format("%s %s", cloud.getDisplayName(), name);
             final EC2FleetNode node = getNode();
             if(node != null) {
-                final int totalUses = node.getMaxTotalUses();
-                if(totalUses != -1) {
-                    return String.format("%s Builds left: %d ", displayName, totalUses);
+                final int usesRemaining = node.getUsesRemaining();
+                if(usesRemaining != -1) {
+                    return String.format("%s Builds left: %d ", displayName, usesRemaining);
                 }
             }
             return displayName;
@@ -82,6 +87,8 @@ public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloud
             final AbstractEC2FleetCloud cloud = node.getCloud();
             if (cloud != null && StringUtils.isNotBlank(instanceId)) {
                 cloud.scheduleToTerminate(instanceId, false, EC2AgentTerminationReason.AGENT_DELETED);
+                // Persist a flag here as the cloud objects can be re-created on user-initiated changes, hence, losing track of instance ids scheduled to terminate.
+                this.isMarkedForDeletion = true;
             }
         }
         return super.doDoDelete();

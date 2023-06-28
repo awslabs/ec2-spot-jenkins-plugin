@@ -9,6 +9,7 @@ import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.cloudbees.jenkins.plugins.awscredentials.AWSCredentialsHelper;
+import com.google.common.collect.Sets;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
@@ -51,6 +52,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+import java.util.stream.Collectors;
 
 /**
  * @see CloudNanny
@@ -212,7 +214,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         this.minSize = Math.max(0, minSize);
         this.maxSize = maxSize;
         this.minSpareSize = Math.max(0, minSpareSize);
-        this.maxTotalUses = StringUtils.isBlank(maxTotalUses) ? -1 : Integer.parseInt(maxTotalUses);
+        this.maxTotalUses = StringUtils.isBlank(maxTotalUses) ? DEFAULT_MAX_TOTAL_USES : Integer.parseInt(maxTotalUses);
         this.numExecutors = Math.max(numExecutors, 1);
         this.addNodeOnlyIfRunning = addNodeOnlyIfRunning;
         this.restrictUsage = restrictUsage;
@@ -282,10 +284,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
     public String getEndpoint() {
         return endpoint;
-    }
-
-    public int getMaxTotalUses() {
-        return maxTotalUses == null ? DEFAULT_MAX_TOTAL_USES : maxTotalUses;
     }
 
     @Override
@@ -380,6 +378,11 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     // Visible for testing
     synchronized void setStats(final FleetStateStats stats) {
         this.stats = stats;
+    }
+
+    // make maxTotalUses inaccessible from cloud for safety. Use {@link EC2FleetNode#maxTotalUses} and {@link EC2FleetNode#usesRemaining} instead.
+    public boolean hasUnlimitedUsesForNodes() {
+        return maxTotalUses == -1;
     }
 
     @Override
@@ -502,7 +505,9 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                 }
             }
             currentToAdd = toAdd;
-            currentInstanceIdsToTerminate = new HashMap<>(instanceIdsToTerminate);
+
+            // for computers currently busy doing work, wait until next update cycle to terminate corresponding instances (issue#363).
+            currentInstanceIdsToTerminate = filterOutBusyNodes();
         }
 
         currentState = updateByState(currentToAdd, currentInstanceIdsToTerminate, currentState);
@@ -531,6 +536,24 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             }
             return stats;
         }
+    }
+
+    private Map<String, EC2AgentTerminationReason> filterOutBusyNodes() {
+        final Jenkins j = Jenkins.get();
+        final Map<String, EC2AgentTerminationReason> filteredInstanceIdsToTerminate = instanceIdsToTerminate.entrySet()
+                .stream()
+                .filter(e -> {
+                    final Computer c = j.getComputer(e.getKey());
+                    return c == null || c.isIdle();
+                })
+                .collect(Collectors.toMap(Map.Entry::getKey,Map.Entry::getValue));
+
+        final Set<String> filteredOutNonIdleIds = Sets.difference(instanceIdsToTerminate.keySet(), filteredInstanceIdsToTerminate.keySet());
+        if (filteredOutNonIdleIds.size() > 0) {
+            info("Skipping termination of the following instances until the next update cycle, as they are still busy doing some work: %s.", filteredOutNonIdleIds);
+        }
+
+        return filteredInstanceIdsToTerminate;
     }
 
     public boolean removePlannedNodeScheduledFutures(final int numToRemove) {
@@ -829,7 +852,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet slave for " + instanceId,
                 effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
-                this, computerLauncher, getMaxTotalUses());
+                this, computerLauncher, maxTotalUses);
 
         // Initialize our retention strategy
         node.setRetentionStrategy(new EC2RetentionStrategy());

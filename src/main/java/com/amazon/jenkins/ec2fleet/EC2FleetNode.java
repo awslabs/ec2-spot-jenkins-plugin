@@ -17,7 +17,8 @@ import java.util.List;
 public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudAware {
 
     private volatile AbstractEC2FleetCloud cloud;
-    private int maxTotalUses;
+    private final int maxTotalUses;
+    private int usesRemaining;
 
     public EC2FleetNode(final String name, final String nodeDescription, final String remoteFS, final int numExecutors, final Mode mode, final String label,
                         final List<? extends NodeProperty<?>> nodeProperties, final AbstractEC2FleetCloud cloud, ComputerLauncher launcher, final int maxTotalUses) throws IOException, Descriptor.FormException {
@@ -26,6 +27,7 @@ public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudA
                 launcher, RetentionStrategy.NOOP, nodeProperties);
         this.cloud = cloud;
         this.maxTotalUses = maxTotalUses;
+        this.usesRemaining = maxTotalUses;
     }
 
     @Override
@@ -61,8 +63,12 @@ public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudA
         return this.maxTotalUses;
     }
 
-    public void setMaxTotalUses(final int maxTotalUses) {
-        this.maxTotalUses = maxTotalUses;
+    public int getUsesRemaining() {
+        return usesRemaining;
+    }
+
+    public void decrementUsesRemaining() {
+        this.usesRemaining--;
     }
 
     @Extension

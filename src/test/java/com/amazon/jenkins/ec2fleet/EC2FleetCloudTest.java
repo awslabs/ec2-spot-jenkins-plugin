@@ -78,7 +78,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("unchecked")
 @RunWith(PowerMockRunner.class)
 @PrepareForTest({Jenkins.class, EC2FleetCloud.class, EC2FleetCloud.DescriptorImpl.class,
-        LabelFinder.class, FleetStateStats.class, EC2Fleets.class})
+        LabelFinder.class, FleetStateStats.class, EC2Fleets.class, EC2FleetNodeComputer.class})
 public class EC2FleetCloudTest {
 
     private SpotFleetRequestConfig spotFleetRequestConfig1;
@@ -101,6 +101,12 @@ public class EC2FleetCloudTest {
 
     @Mock
     private AmazonEC2 amazonEC2;
+
+    @Mock
+    private EC2FleetNodeComputer idleComputer;
+
+    @Mock
+    private EC2FleetNodeComputer busyComputer;
 
     @Before
     public void before() {
@@ -139,6 +145,9 @@ public class EC2FleetCloudTest {
 
         PowerMockito.mockStatic(Jenkins.class);
         PowerMockito.when(Jenkins.get()).thenReturn(jenkins);
+
+        PowerMockito.when(idleComputer.isIdle()).thenReturn(true);
+        PowerMockito.when(busyComputer.isIdle()).thenReturn(false);
     }
 
     @After
@@ -1227,6 +1236,49 @@ public class EC2FleetCloudTest {
         Assert.assertEquals(4, fleetCloud.getStats().getNumDesired());
     }
 
+    /**
+     * For context, see https://github.com/jenkinsci/ec2-fleet-plugin/issues/363
+     */
+    @Test
+    public void update_shouldTerminateIdleOrNullInstancesOnly() {
+        // given
+        when(ec2Api.connect(any(String.class), any(String.class), anyString())).thenReturn(amazonEC2);
+        when(ec2Api.describeInstances(any(AmazonEC2.class), any(Set.class))).thenReturn(new HashMap<String, Instance>(){{
+                put("i-1", new Instance().withPublicIpAddress("p-ip").withInstanceId("i-1"));
+                put("i-2", new Instance().withPublicIpAddress("p-ip").withInstanceId("i-2"));
+                put("i-3", new Instance().withPublicIpAddress("p-ip").withInstanceId("i-3"));
+            }});
+        PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
+                .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
+                        new HashSet<>(Arrays.asList("i-1", "i-2", "i-3")), Collections.<String, Double>emptyMap()));
+        mockNodeCreatingPart();
+
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+                "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
+                false, 0, 0, 2, 0, 1, false,
+                false, "-1", false,
+                0, 0, false, 10, false);
+
+        when(jenkins.getComputer("i-1")).thenReturn(idleComputer);
+        when(jenkins.getComputer("i-2")).thenReturn(busyComputer);
+        when(jenkins.getComputer("i-3")).thenReturn(null);
+
+        // when
+        fleetCloud.scheduleToTerminate("i-1", false, EC2AgentTerminationReason.IDLE_FOR_TOO_LONG);
+        fleetCloud.scheduleToTerminate("i-2", true, EC2AgentTerminationReason.MAX_TOTAL_USES_EXHAUSTED);
+        fleetCloud.scheduleToTerminate("i-3", false, EC2AgentTerminationReason.AGENT_DELETED);
+
+        // then - verify both instances were scheduled for termination
+        assertEquals(new HashSet<>(Arrays.asList("i-1", "i-2", "i-3")), fleetCloud.getInstanceIdsToTerminate().keySet());
+
+        // when
+        fleetCloud.update();
+
+        // then - i-2 remains scheduled for termination, for next update cycle as it is busy
+        verify(ec2Api).terminateInstances(amazonEC2, new HashSet<>(Arrays.asList("i-1", "i-3")));
+        assertEquals(new HashSet<>(Arrays.asList("i-2")), fleetCloud.getInstanceIdsToTerminate().keySet());
+    }
+
     @Test
     public void update_shouldUpdateStateWithMinSpare() throws IOException {
         // given
@@ -1966,6 +2018,58 @@ public class EC2FleetCloudTest {
                 , 0, 0, false,
                 45, false);
         assertEquals(1, ec2FleetCloud.getNumExecutors());
+    }
+
+    @Test
+    public void hasUnlimitedUsesForNodes_shouldReturnTrueWhenUnlimited() {
+        final int maxTotalUses = -1;
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "CloudName", null, null, null, null, null, null,
+                null, null, null, false,
+                false, null, 0, 1, 0,
+                0, true, false, String.valueOf(maxTotalUses), false
+                , 0, 0, false,
+                45, false);
+        assertTrue(ec2FleetCloud.hasUnlimitedUsesForNodes());
+    }
+
+    @Test
+    public void hasUnlimitedUsesForNodes_shouldReturnDefaultTrueForNull() {
+        final String maxTotalUses = null;
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "CloudName", null, null, null, null, null, null,
+                null, null, null, false,
+                false, null, 0, 1, 0,
+                0, true, false, maxTotalUses, false
+                , 0, 0, false,
+                45, false);
+        assertTrue(ec2FleetCloud.hasUnlimitedUsesForNodes());
+    }
+
+    @Test
+    public void hasUnlimitedUsesForNodes_shouldReturnDefaultTrueForEmptyString() {
+        final String maxTotalUses = "";
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "CloudName", null, null, null, null, null, null,
+                null, null, null, false,
+                false, null, 0, 1, 0,
+                0, true, false, maxTotalUses, false
+                , 0, 0, false,
+                45, false);
+        assertTrue(ec2FleetCloud.hasUnlimitedUsesForNodes());
+    }
+
+    @Test
+    public void hasUnlimitedUsesForNodes_shouldReturnFalseWhenLimited() {
+        final int maxTotalUses = 5;
+        EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
+                "CloudName", null, null, null, null, null, null,
+                null, null, null, false,
+                false, null, 0, 1, 0,
+                0, true, false, String.valueOf(maxTotalUses), false
+                , 0, 0, false,
+                45, false);
+        assertFalse(ec2FleetCloud.hasUnlimitedUsesForNodes());
     }
 
     private void mockNodeCreatingPart() {

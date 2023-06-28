@@ -82,7 +82,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        assertTrue(StringUtils.isNotBlank(((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.oldId").get(0)).getText()));
+        assertTrue(StringUtils.isNotBlank(((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.oldId").get(0)).getText()));
     }
 
     @Test
@@ -100,7 +100,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("computer/node-name/configure");
 
-        assertTrue(StringUtils.isNotBlank(((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).getText()));
+        assertTrue(StringUtils.isNotBlank(((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.name").get(0)).getText()));
     }
 
     @Test
@@ -119,7 +119,7 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configureClouds");
         HtmlForm form = page.getFormByName("config");
 
-        ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
+        ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
 
         HtmlFormUtil.submit(form);
 
@@ -140,7 +140,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        assertEquals("ec2-fleet", ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.labelString").get(0)).getText());
+        assertEquals("ec2-fleet", ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.labelString").get(0)).getText());
     }
 
     @Test
@@ -161,7 +161,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
+        List<DomElement> elementsByName = IntegrationTest.getElementsByNameWithoutJdk(page, "_.name");
         assertEquals(2, elementsByName.size());
         assertEquals("a", ((HtmlTextInput) elementsByName.get(0)).getText());
         assertEquals("b", ((HtmlTextInput) elementsByName.get(1)).getText());
@@ -185,7 +185,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        List<DomElement> elementsByName = getElementsByNameWithoutJdk(page, "_.name");
+        List<DomElement> elementsByName = IntegrationTest.getElementsByNameWithoutJdk(page, "_.name");
         assertEquals(2, elementsByName.size());
         assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(0)).getText());
         assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(1)).getText());
@@ -210,7 +210,7 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configureClouds");
         HtmlForm form = page.getFormByName("config");
 
-        ((HtmlTextInput) getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
+        ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
 
         HtmlFormUtil.submit(form);
 
@@ -229,7 +229,7 @@ public class UiIntegrationTest {
 
         HtmlPage page = j.createWebClient().goTo("configureClouds");
 
-        final List<DomElement> regionDropDown = getElementsByNameWithoutJdk(page, "_.region");
+        final List<DomElement> regionDropDown = IntegrationTest.getElementsByNameWithoutJdk(page, "_.region");
 
         for (final DomElement regionElement : regionDropDown.get(0).getChildElements()) {
             final String displayName = regionElement.getAttributes().getNamedItem("label").getTextContent();
@@ -252,7 +252,7 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configureClouds");
         boolean isPresent = false;
 
-        final List<DomElement> regionDropDown = getElementsByNameWithoutJdk(page, "_.region");
+        final List<DomElement> regionDropDown = IntegrationTest.getElementsByNameWithoutJdk(page, "_.region");
 
         for (final DomElement regionElement : regionDropDown.get(0).getChildElements()) {
             final String label = regionElement.getAttributes().getNamedItem("label").getTextContent();
@@ -305,16 +305,4 @@ public class UiIntegrationTest {
         assertSame(cloud1, j.jenkins.getCloud("a"));
         assertSame(cloud2, j.jenkins.getCloud("b"));
     }
-
-    private static List<DomElement> getElementsByNameWithoutJdk(HtmlPage page, String name) {
-        String jdkCheckUrl = "/jenkins/descriptorByName/hudson.model.JDK/checkName";
-        List<DomElement> r = new ArrayList<>();
-        for (DomElement domElement : page.getElementsByName(name)) {
-            if (!jdkCheckUrl.equals(domElement.getAttribute("checkurl"))) {
-                r.add(domElement);
-            }
-        }
-        return r;
-    }
-
 }
