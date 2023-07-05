@@ -18,7 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.amazon.jenkins.ec2fleet.FleetStateStats;
-import com.amazon.jenkins.ec2fleet.utils.AWSUtils;
+import com.amazon.jenkins.ec2fleet.aws.AWSUtils;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.services.autoscaling.AmazonAutoScalingClient;
 import com.amazonaws.services.autoscaling.model.AutoScalingGroup;

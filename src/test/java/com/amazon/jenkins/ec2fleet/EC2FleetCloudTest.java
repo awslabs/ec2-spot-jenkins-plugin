@@ -1,11 +1,12 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.aws.EC2Api;
 import com.amazon.jenkins.ec2fleet.fleet.AutoScalingGroupFleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazon.jenkins.ec2fleet.fleet.EC2SpotFleet;
-import com.amazon.jenkins.ec2fleet.utils.RegionInfo;
-import com.amazon.jenkins.ec2fleet.utils.AwsPermissionChecker;
+import com.amazon.jenkins.ec2fleet.aws.RegionInfo;
+import com.amazon.jenkins.ec2fleet.aws.AwsPermissionChecker;
 import com.amazonaws.regions.RegionUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.AmazonEC2Client;
@@ -1931,7 +1932,7 @@ public class EC2FleetCloudTest {
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
                 , 0, 0, false, 10, false);
-        assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.FLEET_CLOUD_ID);
+        assertEquals(ec2FleetCloud.getDisplayName(), EC2FleetCloud.DEFAULT_FLEET_CLOUD_ID);
     }
 
     @Test

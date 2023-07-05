@@ -1,6 +1,6 @@
-package com.amazon.jenkins.ec2fleet.utils;
+package com.amazon.jenkins.ec2fleet.aws;
 
-import com.amazon.jenkins.ec2fleet.utils.AWSUtils;
+import com.amazon.jenkins.ec2fleet.aws.AWSUtils;
 import com.amazonaws.ClientConfiguration;
 import hudson.ProxyConfiguration;
 import org.junit.Assert;

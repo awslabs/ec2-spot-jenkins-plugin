@@ -1,4 +1,4 @@
-package com.amazon.jenkins.ec2fleet.utils;
+package com.amazon.jenkins.ec2fleet.aws;
 
 import com.amazon.jenkins.ec2fleet.Registry;
 import com.amazonaws.regions.Regions;

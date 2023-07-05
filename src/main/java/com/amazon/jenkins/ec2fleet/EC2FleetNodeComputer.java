@@ -10,8 +10,8 @@ import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
 
 /**
- * @see EC2FleetNode
- * @see EC2FleetAutoResubmitComputerLauncher
+ * The {@link EC2FleetNodeComputer} represents the running state of {@link EC2FleetNode} that holds executors.
+ * @see hudson.model.Computer
  */
 @ThreadSafe
 public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloudAware {

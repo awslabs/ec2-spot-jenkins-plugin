@@ -1,11 +1,12 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.aws.AwsPermissionChecker;
+import com.amazon.jenkins.ec2fleet.aws.CloudFormationApi;
+import com.amazon.jenkins.ec2fleet.aws.EC2Api;
+import com.amazon.jenkins.ec2fleet.aws.RegionHelper;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazon.jenkins.ec2fleet.fleet.EC2SpotFleet;
-import com.amazon.jenkins.ec2fleet.utils.AwsPermissionChecker;
 import com.amazon.jenkins.ec2fleet.utils.EC2FleetCloudAwareUtils;
-import com.amazon.jenkins.ec2fleet.utils.JenkinsUtils;
-import com.amazon.jenkins.ec2fleet.utils.RegionHelper;
 import com.amazonaws.services.cloudformation.AmazonCloudFormation;
 import com.amazonaws.services.cloudformation.model.StackStatus;
 import com.amazonaws.services.ec2.AmazonEC2;
@@ -62,7 +63,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
     public static final String EC2_INSTANCE_TAG_NAMESPACE = "ec2-fleet-plugin";
     public static final String EC2_INSTANCE_CLOUD_NAME_TAG = EC2_INSTANCE_TAG_NAMESPACE + ":cloud-name";
 
-    public static final String FLEET_CLOUD_ID = "FleetCloudLabel";
+    public static final String DEFAULT_FLEET_CLOUD_ID = "FleetCloudLabel";
 
     public static final int DEFAULT_CLOUD_STATUS_INTERVAL_SEC = 10;
 
@@ -141,7 +142,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
                               final Integer cloudStatusIntervalSec,
                               final boolean noDelayProvision,
                               final String ec2KeyPairName) {
-        super(StringUtils.isBlank(name) ? FLEET_CLOUD_ID : name);
+        super(StringUtils.isBlank(name) ? DEFAULT_FLEET_CLOUD_ID : name);
         init();
         this.awsCredentialsId = awsCredentialsId;
         this.region = region;

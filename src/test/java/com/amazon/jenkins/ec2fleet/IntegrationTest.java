@@ -1,5 +1,7 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.aws.CloudFormationApi;
+import com.amazon.jenkins.ec2fleet.aws.EC2Api;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazon.jenkins.ec2fleet.fleet.EC2SpotFleet;
@@ -31,7 +33,6 @@ import com.amazonaws.services.ec2.model.SpotFleetRequestConfigData;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
 import com.gargoylesoftware.htmlunit.html.DomElement;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
 import com.gargoylesoftware.htmlunit.html.HtmlPage;
 import hudson.Functions;
 import hudson.model.AbstractBuild;
@@ -57,7 +58,6 @@ import org.jvnet.hudson.test.JenkinsRule;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
-import org.xml.sax.SAXException;
 
 import javax.annotation.Nullable;
 import java.io.IOException;
@@ -91,7 +91,7 @@ import static org.mockito.Mockito.when;
 @SuppressWarnings("WeakerAccess")
 public abstract class IntegrationTest {
 
-    protected static final long JOB_SLEEP_TIME = 30;
+    protected static final long JOB_SLEEP_TIME = 5;
 
     @ClassRule
     public static BuildWatcher bw = new BuildWatcher();

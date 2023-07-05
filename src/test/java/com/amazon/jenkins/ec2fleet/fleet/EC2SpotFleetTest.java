@@ -1,6 +1,6 @@
 package com.amazon.jenkins.ec2fleet.fleet;
 
-import com.amazon.jenkins.ec2fleet.EC2Api;
+import com.amazon.jenkins.ec2fleet.aws.EC2Api;
 import com.amazon.jenkins.ec2fleet.FleetStateStats;
 import com.amazon.jenkins.ec2fleet.Registry;
 import com.amazonaws.services.ec2.AmazonEC2;

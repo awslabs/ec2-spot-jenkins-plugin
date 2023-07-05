@@ -14,7 +14,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * @see EC2FleetCloud
+ * {@link CloudNanny} is responsible for periodically running update (i.e. sync-state-with-AWS) cycles for {@link EC2FleetCloud}s.
  */
 @Extension
 @SuppressWarnings("unused")

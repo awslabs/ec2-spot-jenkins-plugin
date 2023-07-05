@@ -1,7 +1,7 @@
 package com.amazon.jenkins.ec2fleet.fleet;
 
 import com.amazon.jenkins.ec2fleet.FleetStateStats;
-import com.amazon.jenkins.ec2fleet.utils.AWSUtils;
+import com.amazon.jenkins.ec2fleet.aws.AWSUtils;
 import com.amazonaws.ClientConfiguration;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.RegionUtils;

@@ -14,6 +14,9 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.List;
 
+/**
+ * The {@link EC2FleetNode} represents an agent running on an EC2 instance, responsible for creating {@link EC2FleetNodeComputer}.
+ */
 public class EC2FleetNode extends Slave implements EphemeralNode, EC2FleetCloudAware {
 
     private volatile AbstractEC2FleetCloud cloud;

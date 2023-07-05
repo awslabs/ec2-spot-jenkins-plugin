@@ -14,29 +14,26 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * @see EC2FleetCloud
+ * The {@link EC2RetentionStrategy} controls when to take {@link EC2FleetNodeComputer} offline, bring it back online, or even to destroy it.
  */
-public class EC2RetentionStrategy extends RetentionStrategy<SlaveComputer> implements ExecutorListener {
-
-    private static final int RE_CHECK_IN_A_MINUTE = 1;
-
+public class EC2RetentionStrategy extends RetentionStrategy<EC2FleetNodeComputer> implements ExecutorListener {
     private static final Logger LOGGER = Logger.getLogger(EC2RetentionStrategy.class.getName());
+    private static final int RE_CHECK_IN_A_MINUTE = 1;
 
     /**
      * Will be called under {@link hudson.model.Queue#withLock(Runnable)}
      *
-     * @param computer computer
+     * @param fc EC2FleetNodeComputer
      * @return delay in min before next run
      */
     @SuppressFBWarnings(
             value = "BC_UNCONFIRMED_CAST",
             justification = "to ignore EC2FleetNodeComputer cast")
     @Override
-    public long check(final SlaveComputer computer) {
-        final EC2FleetNodeComputer fc = (EC2FleetNodeComputer) computer;
+    public long check(final EC2FleetNodeComputer fc) {
         final AbstractEC2FleetCloud cloud = fc.getCloud();
 
-        LOGGER.fine(String.format("Checking if node '%s' is idle ", computer.getName()));
+        LOGGER.fine(String.format("Checking if node '%s' is idle ", fc.getName()));
 
         // in some multi-thread edge cases cloud could be null for some time, just be ok with that
         if (cloud == null) {
@@ -101,7 +98,7 @@ public class EC2RetentionStrategy extends RetentionStrategy<SlaveComputer> imple
     }
 
     @Override
-    public void start(SlaveComputer c) {
+    public void start(EC2FleetNodeComputer c) {
         LOGGER.log(Level.INFO, "Connecting to instance: " + c.getDisplayName());
         c.connect(false);
     }

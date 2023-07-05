@@ -22,15 +22,16 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
+ * The {@link EC2FleetAutoResubmitComputerLauncher} is responsible for controlling:
+ *  * how {@link EC2FleetNodeComputer}s are launched
+ *  * how {@link EC2FleetNodeComputer}s connect to agents {@link EC2FleetNode}
+ *
  * This is wrapper for {@link ComputerLauncher} to get notification when slave was disconnected
  * and automatically resubmit {@link hudson.model.Queue.Task} if reason is unexpected termination
  * which usually means EC2 instance was interrupted.
  * <p>
  * This is optional feature, it's enabled by default, but could be disabled by
  * {@link EC2FleetCloud#isDisableTaskResubmit()}
- *
- * @see EC2FleetNode
- * @see EC2FleetNodeComputer
  */
 @SuppressWarnings("WeakerAccess")
 @ThreadSafe

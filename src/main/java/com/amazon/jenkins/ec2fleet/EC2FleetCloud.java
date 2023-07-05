@@ -1,10 +1,10 @@
 package com.amazon.jenkins.ec2fleet;
 
+import com.amazon.jenkins.ec2fleet.aws.AwsPermissionChecker;
+import com.amazon.jenkins.ec2fleet.aws.RegionHelper;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
-import com.amazon.jenkins.ec2fleet.utils.AwsPermissionChecker;
 import com.amazon.jenkins.ec2fleet.utils.EC2FleetCloudAwareUtils;
-import com.amazon.jenkins.ec2fleet.utils.RegionHelper;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
@@ -55,7 +55,16 @@ import java.util.logging.SimpleFormatter;
 import java.util.stream.Collectors;
 
 /**
- * @see CloudNanny
+ * The {@link EC2FleetCloud} contains the main configuration values used while creating Jenkins nodes.
+ * EC2FleetCloud can represent either an AWS EC2 Spot Fleet or an AWS AutoScalingGroup.
+ *
+ * Responsibilities include:
+ *  * maintain the configuration values set by user for the Cloud.
+ *      User-initiated changes to such configuration will result in a new EC2FleetCloud object. See {@link Cloud}.
+ *  * provision new EC2 capacity along with supporting provisioning checks for EC2FleetCloud
+ *  * keep {@link FleetStateStats} in sync with state on the AWS side via {@link EC2FleetCloud#update()}
+ *  * provide helper methods to extract certain state values
+ *  * provide helper methods to schedule termination of compute / nodes
  */
 @SuppressWarnings({"unused", "WeakerAccess"})
 public class EC2FleetCloud extends AbstractEC2FleetCloud {
@@ -63,7 +72,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     public static final String EC2_INSTANCE_TAG_NAMESPACE = "ec2-fleet-plugin";
     public static final String EC2_INSTANCE_CLOUD_NAME_TAG = EC2_INSTANCE_TAG_NAMESPACE + ":cloud-name";
 
-    public static final String FLEET_CLOUD_ID = "FleetCloud";
+    public static final String DEFAULT_FLEET_CLOUD_ID = "FleetCloud";
 
     public static final int DEFAULT_CLOUD_STATUS_INTERVAL_SEC = 10;
 
@@ -195,7 +204,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                          final boolean scaleExecutorsByWeight,
                          final Integer cloudStatusIntervalSec,
                          final boolean noDelayProvision) {
-        super(StringUtils.isBlank(name) ? FLEET_CLOUD_ID : name);
+        super(StringUtils.isBlank(name) ? DEFAULT_FLEET_CLOUD_ID : name);
         init();
         this.credentialsId = credentialsId;
         this.awsCredentialsId = awsCredentialsId;
@@ -238,6 +247,8 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     }
 
     /**
+     * Deprecated.Use {@link EC2FleetCloud#awsCredentialsId}
+     *
      * See {@link EC2FleetCloud#awsCredentialsId} documentation. Don't use fields directly to be able
      * get old version of plugin and for new.
      *
