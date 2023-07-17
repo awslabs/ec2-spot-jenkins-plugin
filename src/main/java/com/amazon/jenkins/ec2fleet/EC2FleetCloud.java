@@ -4,7 +4,6 @@ import com.amazon.jenkins.ec2fleet.aws.AwsPermissionChecker;
 import com.amazon.jenkins.ec2fleet.aws.RegionHelper;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
-import com.amazon.jenkins.ec2fleet.utils.EC2FleetCloudAwareUtils;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceStateName;
@@ -13,6 +12,7 @@ import com.google.common.collect.Sets;
 import hudson.Extension;
 import hudson.model.Computer;
 import hudson.model.Descriptor;
+import hudson.model.Failure;
 import hudson.model.Label;
 import hudson.model.Node;
 import hudson.model.Queue;
@@ -85,25 +85,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     private static final SimpleFormatter sf = new SimpleFormatter();
     private static final Logger LOGGER = Logger.getLogger(EC2FleetCloud.class.getName());
     private static final ScheduledExecutorService EXECUTOR = Executors.newSingleThreadScheduledExecutor();
-
-    // Counter to keep track of planned nodes per EC2FleetCloud, used in node's display name
-    private transient AtomicInteger plannedNodeCounter = new AtomicInteger(1);
-
-    /**
-     * Provide unique identifier for this instance of {@link EC2FleetCloud}, <code>transient</code>
-     * will not be stored. Not available for customer, instead use {@link EC2FleetCloud#name}
-     * will be used only during Jenkins configuration update <code>config.jelly</code>,
-     * when new instance of same cloud is created and we need to find old instance and
-     * repoint resources like {@link Computer} {@link Node} etc.
-     * <p>
-     * It's lazy to support old versions which don't have this field at all.
-     * <p>
-     * However it's stable, as soon as it will be created and called first uuid will be same
-     * for all future calls to the same instances of lazy uuid.
-     *
-     * @see EC2FleetCloudAware
-     */
-    private transient LazyUuid id;
 
     /**
      * Replaced with {@link EC2FleetCloud#awsCredentialsId}
@@ -178,9 +159,11 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
     private transient ArrayList<ScheduledFuture<?>> plannedNodeScheduledFutures;
 
+    // Counter to keep track of planned nodes per EC2FleetCloud, used in node's display name
+    private transient AtomicInteger plannedNodeCounter = new AtomicInteger(1);
+
     @DataBoundConstructor
     public EC2FleetCloud(final String name,
-                         final String oldId,
                          final String awsCredentialsId,
                          final @Deprecated String credentialsId,
                          final String region,
@@ -238,8 +221,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         if (fleet != null) {
             this.stats = EC2Fleets.get(fleet).getState(
                     getAwsCredentialsId(), region, endpoint, getFleet());
-            // Reassign existing nodes/computer with new reference of cloud
-            EC2FleetCloudAwareUtils.reassign(fleet, this);
         }
     }
 
@@ -257,16 +238,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
      */
     public String getAwsCredentialsId() {
         return StringUtils.isNotBlank(awsCredentialsId) ? awsCredentialsId : credentialsId;
-    }
-
-    /**
-     * Called old as will be used by new instance of cloud, for
-     * which this id is old (not current)
-     *
-     * @return id of current cloud
-     */
-    public String getOldId() {
-        return id.getValue();
     }
 
     public boolean isDisableTaskResubmit() {
@@ -298,7 +269,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         return endpoint;
     }
 
-    @Override
     public String getFleet() {
         return fleet;
     }
@@ -419,6 +389,15 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
     @Override
     public synchronized Collection<NodeProvisioner.PlannedNode> provision(@Nonnull final Cloud.CloudState cloudState, final int excessWorkload) {
+        Jenkins jenkinsInstance = Jenkins.get();
+        if (jenkinsInstance.isQuietingDown()) {
+            LOGGER.log(Level.FINE, "Not provisioning nodes, Jenkins instance is quieting down");
+            return Collections.emptyList();
+        } else if (jenkinsInstance.isTerminating()) {
+            LOGGER.log(Level.FINE, "Not provisioning nodes, Jenkins instance is terminating");
+            return Collections.emptyList();
+        }
+
         fine("excessWorkload %s", excessWorkload);
 
         if (stats == null) {
@@ -469,6 +448,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             // This protects us from leaving planned nodes stranded within Jenkins NodeProvisioner when the Fleet
             // is updated or removed before it can scale. After scaling, EC2FleetOnlineChecker will cancel the future
             // if something happens to the Fleet.
+            // TODO: refactor to consolidate logic with EC2FleetOnlineChecker
             final ScheduledFuture<?> scheduledFuture = EXECUTOR.schedule(() -> {
                 if (completableFuture.isDone()) {
                     return;
@@ -644,7 +624,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
 
         final Set<String> jenkinsInstances = new HashSet<>();
         for (final Node node : jenkins.getNodes()) {
-            if (node instanceof EC2FleetNode && ((EC2FleetNode) node).getCloud().getFleet().equals(fleet)) {
+            if (node instanceof EC2FleetNode && ((EC2FleetCloud)((EC2FleetNode) node).getCloud()).getFleet().equals(fleet)) {
                 jenkinsInstances.add(node.getNodeName());
             }
         }
@@ -776,7 +756,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     @Override
     public boolean canProvision(final Cloud.CloudState cloudState) {
         final Label label = cloudState.getLabel();
-        fine("CanProvision called on fleet: \"" + this.labelString + "\" wanting: \"" + (label == null ? "(unspecified)" : label.getName()) + "\".");
         if (fleet == null) {
             fine("Fleet/ASG for cloud is null, returning false");
             return false;
@@ -786,7 +765,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             return false;
         }
         if (label != null && !Label.parse(this.labelString).containsAll(label.listAtoms())) {
-            fine("Label '%s' not found within Fleet's labels '%s', returning false", label, this.labelString);
+            finer("Label '%s' not found within Fleet's labels '%s', returning false", label, this.labelString);
             return false;
         }
         return true;
@@ -798,8 +777,6 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     }
 
     private void init() {
-        id = new LazyUuid();
-
         plannedNodesCache = new HashSet<>();
         instanceIdsToTerminate = new HashMap<>();
         plannedNodeScheduledFutures = new ArrayList<>();
@@ -864,7 +841,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         final Node.Mode nodeMode = restrictUsage ? Node.Mode.EXCLUSIVE : Node.Mode.NORMAL;
         final EC2FleetNode node = new EC2FleetNode(instanceId, "Fleet agent for " + instanceId,
                 effectiveFsRoot, effectiveNumExecutors, nodeMode, labelString, new ArrayList<NodeProperty<?>>(),
-                this, computerLauncher, maxTotalUses);
+                this.name, computerLauncher, maxTotalUses);
 
         // Initialize our retention strategy
         node.setRetentionStrategy(new EC2RetentionStrategy());
@@ -905,7 +882,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                     }
 
                     // Do not count computer if it is not a part of the given fleet
-                    if (!Objects.equals(((EC2FleetNodeComputer) computer).getCloud().getFleet(), currentState.getFleetId())) {
+                    if (!Objects.equals(((EC2FleetCloud)((EC2FleetNodeComputer) computer).getCloud()).getFleet(), currentState.getFleetId())) {
                         continue;
                     }
                     currentBusyInstances++;
@@ -928,12 +905,21 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
         LOGGER.fine(getLogPrefix() + String.format(msg, args));
     }
 
+    private void finer(final String msg, final Object... args) {
+        LOGGER.finer(getLogPrefix() + String.format(msg, args));
+    }
+
     private void warning(final String msg, final Object... args) {
         LOGGER.warning(getLogPrefix() + String.format(msg, args));
     }
 
     private void warning(final Throwable t, final String msg, final Object... args) {
         LOGGER.log(Level.WARNING, getLogPrefix() + String.format(msg, args), t);
+    }
+
+    @Override
+    public DescriptorImpl getDescriptor() {
+        return (DescriptorImpl) super.getDescriptor();
     }
 
     @Extension
@@ -972,6 +958,15 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             return FormValidation.error("Maximum Total Uses must be greater or equal to -1");
         }
 
+        public FormValidation doCheckCloudName(@QueryParameter final String name) {
+            try {
+                Jenkins.checkGoodName(name);
+            } catch (Failure e) {
+                return FormValidation.error(e.getMessage());
+            }
+            return FormValidation.ok();
+        }
+
         public ListBoxModel doFillFleetItems(@QueryParameter final boolean showAllFleets,
                                              @QueryParameter final String region,
                                              @QueryParameter final String endpoint,
@@ -985,7 +980,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                             awsCredentialsId, region, endpoint, model, fleet, showAllFleets);
                 }
             } catch (final Exception ex) {
-                LOGGER.log(Level.WARNING, String.format("Cannot describe fleets in %s or by endpoint %s", region, endpoint), ex);
+                LOGGER.log(Level.WARNING, String.format("Cannot describe fleets in '%s' or by endpoint '%s'", region, endpoint), ex);
                 return model;
             }
 
@@ -1026,7 +1021,5 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             save();
             return super.configure(req, formData);
         }
-
     }
-
 }

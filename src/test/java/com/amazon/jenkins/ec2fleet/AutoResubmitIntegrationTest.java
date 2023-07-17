@@ -73,7 +73,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
 
     @Test
     public void should_successfully_resubmit_freestyle_task() throws Exception {
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 0, 1, false, true,
                 "-1", false, 0, 0, false,
@@ -109,7 +109,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
 
     @Test
     public void should_successfully_resubmit_parametrized_task() throws Exception {
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 0, 1, false, true,
                 "-1", false, 0, 0, false,
@@ -165,7 +165,7 @@ public class AutoResubmitIntegrationTest extends IntegrationTest {
 
     @Test
     public void should_not_resubmit_if_disabled() throws Exception {
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 0, 1, false, true,
                 "-1", true, 0, 0, false, 10, false);

@@ -112,6 +112,7 @@ public class AutoScalingGroupFleet implements EC2Fleet {
         throw new UnsupportedOperationException();
     }
 
+    // TODO: move to Registry
     public AmazonAutoScalingClient createClient(
             final String awsCredentialsId, final String regionName, final String endpoint) {
         final AmazonWebServicesCredentials credentials = AWSCredentialsHelper.getCredentials(awsCredentialsId, Jenkins.get());
@@ -125,7 +126,7 @@ public class AutoScalingGroupFleet implements EC2Fleet {
         return client;
     }
 
-    // todo do we want to merge with EC2Api#getEndpoint
+    // TODO: merge with EC2Api#getEndpoint
     @Nullable
     private String getEndpoint(@Nullable final String regionName, @Nullable final String endpoint) {
         if (StringUtils.isNotEmpty(endpoint)) {

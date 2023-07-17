@@ -53,7 +53,7 @@ public class NoDelayProvisionStrategyPerformanceTest extends IntegrationTest {
 
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
         final String label = "momo";
-        final EC2FleetCloudWithHistory cloud = new EC2FleetCloudWithHistory(null, null, "credId", null, "region",
+        final EC2FleetCloudWithHistory cloud = new EC2FleetCloudWithHistory(null, "credId", null, "region",
                 null, "fId", label, null, computerConnector, false, false,
                 1, 0, maxWorkers, 0, 1, true, false,
                 false, 0, 0, false,

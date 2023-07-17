@@ -65,7 +65,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
                 new FleetStateStats("", 0, FleetStateStats.State.active(), Collections.emptySet(),
                         Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 0, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -99,7 +99,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
 
         mockEc2FleetApi();
 
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -134,7 +134,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
                 new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
-        EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 0, 1, true, false,
                 "-1", false, 300, 15, false,
@@ -168,7 +168,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
                 new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
-        final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -196,7 +196,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         ComputerConnector computerConnector = mock(ComputerConnector.class);
         when(computerConnector.launch(anyString(), any(TaskListener.class))).thenReturn(computerLauncher);
 
-        EC2FleetCloud cloud = spy(new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = spy(new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -257,7 +257,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
                 new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 10, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -294,7 +294,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString())).thenReturn(
                 new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
-        EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 0, 0, 2, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -325,7 +325,7 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         mockEc2FleetApiToEc2SpotFleet(InstanceStateName.Running, 5);
 
         final ComputerConnector computerConnector = new LocalComputerConnector(j);
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, computerConnector, false, false,
                 1, 0, 5, 0, 1, true, false,
                 "-1", false, 0, 0, false,
@@ -338,13 +338,14 @@ public class ProvisionIntegrationTest extends IntegrationTest {
         j.jenkins.getLabelAtom("momo").nodeProvisioner.suggestReviewNow();
         System.out.println("tasks submitted");
 
-        // wait full execution
+        // wait ful l execution
         waitJobSuccessfulExecution(tasks);
 
         // wait until downscale happens
         tryUntil(new Runnable() {
             @Override
             public void run() {
+                System.out.println("Inside " + j.jenkins.getLabel("momo").getNodes().size());
                 // defect in termination logic, that why 1
                 MatcherAssert.assertThat(j.jenkins.getLabel("momo").getNodes().size(), Matchers.lessThanOrEqualTo(1));
             }

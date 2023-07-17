@@ -1,29 +1,26 @@
 package com.amazon.jenkins.ec2fleet;
 
-import hudson.model.Slave;
 import hudson.slaves.SlaveComputer;
 import org.apache.commons.lang.StringUtils;
 import org.kohsuke.stapler.HttpResponse;
 
+import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 import javax.annotation.concurrent.ThreadSafe;
 import java.io.IOException;
+import java.util.logging.Logger;
 
 /**
  * The {@link EC2FleetNodeComputer} represents the running state of {@link EC2FleetNode} that holds executors.
  * @see hudson.model.Computer
  */
 @ThreadSafe
-public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloudAware {
-
-    private final String name;
-    private volatile AbstractEC2FleetCloud cloud;
+public class EC2FleetNodeComputer extends SlaveComputer {
+    private static final Logger LOGGER = Logger.getLogger(EC2FleetNodeComputer.class.getName());
     private boolean isMarkedForDeletion;
 
-    public EC2FleetNodeComputer(final Slave agent, @Nonnull final String name, @Nonnull final AbstractEC2FleetCloud cloud) {
+    public EC2FleetNodeComputer(final EC2FleetNode agent) {
         super(agent);
-        this.name = name;
-        this.cloud = cloud;
         this.isMarkedForDeletion = false;
     }
 
@@ -36,41 +33,35 @@ public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloud
         return (EC2FleetNode) super.getNode();
     }
 
+    @CheckForNull
+    public String getInstanceId() {
+        EC2FleetNode node = getNode();
+        return node == null ? null : node.getInstanceId();
+    }
+
+    public AbstractEC2FleetCloud getCloud() {
+        final EC2FleetNode node = getNode();
+        return node == null ? null : node.getCloud();
+    }
+
     /**
      * Return label which will represent executor in "Build Executor Status"
      * section of Jenkins UI.
      *
-     * @return node display name
+     * @return Node's display name
      */
     @Nonnull
     @Override
     public String getDisplayName() {
-        if(cloud != null) {
-            final String displayName = String.format("%s %s", cloud.getDisplayName(), name);
-            final EC2FleetNode node = getNode();
-            if(node != null) {
-                final int usesRemaining = node.getUsesRemaining();
-                if(usesRemaining != -1) {
-                    return String.format("%s Builds left: %d ", displayName, usesRemaining);
-                }
+        final EC2FleetNode node = getNode();
+        if(node != null) {
+            final int totalUses = node.getMaxTotalUses();
+            if(totalUses != -1) {
+                return String.format("%s Builds left: %d ", node.getDisplayName(), totalUses);
             }
-            return displayName;
+            return node.getDisplayName();
         }
-        // in some multi-thread edge cases cloud could be null for some time, just be ok with that
-        return "unknown fleet" + " " + name;
-    }
-
-    /**
-     * {@inheritDoc}
-     */
-    @Override
-    public void setCloud(@Nonnull final AbstractEC2FleetCloud cloud) {
-        this.cloud = cloud;
-    }
-
-    @Override
-    public AbstractEC2FleetCloud getCloud() {
-        return cloud;
+        return "unknown fleet" + " " + getName();
     }
 
     /**
@@ -83,7 +74,7 @@ public class EC2FleetNodeComputer extends SlaveComputer implements EC2FleetCloud
         checkPermission(DELETE);
         final EC2FleetNode node = getNode();
         if (node != null) {
-            final String instanceId = node.getNodeName();
+            final String instanceId = node.getInstanceId();
             final AbstractEC2FleetCloud cloud = node.getCloud();
             if (cloud != null && StringUtils.isNotBlank(instanceId)) {
                 cloud.scheduleToTerminate(instanceId, false, EC2AgentTerminationReason.AGENT_DELETED);

@@ -159,7 +159,7 @@ public class EC2FleetCloudTest {
 
     @Test
     public void canProvision_fleetIsNull(){
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", null, "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -172,7 +172,7 @@ public class EC2FleetCloudTest {
 
     @Test
     public void canProvision_restrictUsageLabelIsNull(){
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 true, "-1", false, 0, 0, false,
@@ -185,7 +185,7 @@ public class EC2FleetCloudTest {
 
     @Test
     public void canProvision_LabelNotInLabelString(){
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -198,7 +198,7 @@ public class EC2FleetCloudTest {
 
     @Test
     public void canProvision_LabelInLabelString(){
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "label1 momo", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -222,7 +222,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -248,7 +248,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 8, 0, 3, true,
                 false, "-1", false, 0, 0, false,
@@ -274,7 +274,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 8, 0, 3, true,
                 false, "-1", false, 0, 0, false,
@@ -300,7 +300,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 9, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -326,7 +326,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -352,7 +352,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -378,7 +378,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -408,7 +408,7 @@ public class EC2FleetCloudTest {
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(null);
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -431,7 +431,7 @@ public class EC2FleetCloudTest {
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(null);
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -453,7 +453,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -478,7 +478,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -504,7 +504,7 @@ public class EC2FleetCloudTest {
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
         when(jenkins.getComputers()).thenReturn(new Computer[0]);
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 5, 1, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -529,7 +529,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -555,7 +555,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -586,7 +586,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 1, 1, 0, 1, true,
                 false, "-1", false, 0, 0, false,
@@ -619,7 +619,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 1, 0, 1, true,
                 false, "-1", false, 0,
@@ -643,7 +643,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0,
@@ -671,7 +671,7 @@ public class EC2FleetCloudTest {
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(currentState);
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0,
@@ -700,7 +700,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("fleetId", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0,
@@ -731,7 +731,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("fleetId", 5, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0,
@@ -761,7 +761,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("fleetId", 4, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, null, false,
                 false, 0, 0, 10, 0, 1, true,
                 false, "-1", false, 0,
@@ -802,7 +802,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 false, "-1", false,
@@ -844,7 +844,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 2, 0, 1, false,
                 false, "-1", false,
@@ -880,7 +880,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud("my-fleet", null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud("my-fleet", "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 false, "-1", false,
@@ -921,7 +921,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 false, "-1", false,
@@ -959,7 +959,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1004,7 +1004,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1037,7 +1037,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10, 0, 1, false,
                 true, "-1", false,
@@ -1074,7 +1074,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10, 0, 1, false,
                 true, "-1", false,
@@ -1122,7 +1122,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        final EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10, 0, 1, false,
                 true, "-1", false,
@@ -1174,7 +1174,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10, 0,1, false,
                 true, "-1", false,
@@ -1220,7 +1220,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10,0, 1, false,
                 true, "-1", false,
@@ -1255,7 +1255,7 @@ public class EC2FleetCloudTest {
                         new HashSet<>(Arrays.asList("i-1", "i-2", "i-3")), Collections.<String, Double>emptyMap()));
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 2, 0, 1, false,
                 false, "-1", false,
@@ -1299,7 +1299,7 @@ public class EC2FleetCloudTest {
         PowerMockito.when(ec2Fleet.getState(anyString(), anyString(), anyString(), anyString()))
                 .thenReturn(initState);
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 10, minSpareSize, 1, false,
                 true, "-1", false,
@@ -1340,7 +1340,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1382,7 +1382,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1424,7 +1424,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1466,13 +1466,13 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
                 0, 0, true, 10, false);
 
-        ArgumentCaptor<Node> nodeCaptor = ArgumentCaptor.forClass(Node.class);
+        ArgumentCaptor<EC2FleetNode> nodeCaptor = ArgumentCaptor.forClass(EC2FleetNode.class);
         doNothing().when(jenkins).addNode(nodeCaptor.capture());
 
         // when
@@ -1509,7 +1509,7 @@ public class EC2FleetCloudTest {
         PowerMockito.doThrow(new UnsupportedOperationException("Test exception")).when(ec2Fleet)
                 .modify(anyString(), anyString(), anyString(), anyString(), anyInt(), anyInt(), anyInt());
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1554,7 +1554,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1602,7 +1602,7 @@ public class EC2FleetCloudTest {
 
         mockNodeCreatingPart();
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1632,7 +1632,7 @@ public class EC2FleetCloudTest {
 
         final int timeout = 1;
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0,1, true,
                 false, "-1", false, timeout, 0, false,
@@ -1663,7 +1663,7 @@ public class EC2FleetCloudTest {
 
         final int timeout = 1;
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "", "", null, null, false,
                 false, 0, 0, 10, 0,1, true,
                 false, "-1", false, timeout, 0, false,
@@ -1690,7 +1690,7 @@ public class EC2FleetCloudTest {
                 .thenReturn(new FleetStateStats("", 0, FleetStateStats.State.active(),
                         Collections.<String>emptySet(), Collections.<String, Double>emptyMap()));
 
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 1, 1, 0,1, false,
                 true, "-1", false,
@@ -1706,7 +1706,7 @@ public class EC2FleetCloudTest {
     @Test
     public void removeScheduledFutures_success() {
         // given
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1727,7 +1727,7 @@ public class EC2FleetCloudTest {
     @Test
     public void removeScheduledFutures_scheduledFutureIsEmpty() {
         // given
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1746,7 +1746,7 @@ public class EC2FleetCloudTest {
     @Test
     public void removeScheduledFutures_numToRemoveIsZero() {
         // given
-        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        EC2FleetCloud fleetCloud = new EC2FleetCloud(null, "credId", null, "region",
                 "", "fleetId", "", null, PowerMockito.mock(ComputerConnector.class), false,
                 false, 0, 0, 1, 0, 1, false,
                 true, "-1", false,
@@ -1944,7 +1944,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getDisplayName_returnDefaultWhenNull() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, null, null, null, null, null,
+                null,  null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -1955,7 +1955,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getDisplayName_returnDisplayName() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -1967,7 +1967,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnNull_whenNoCredentialsIdOrAwsCredentialsId() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, null, null, null, null, null,
+                null,  null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false,
@@ -1979,7 +1979,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnValue_whenCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, null, "Opa", null, null, null,
+                null, null, "Opa", null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -1991,7 +1991,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnValue_whenAwsCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, "Opa", null, null, null, null,
+                null, "Opa", null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -2003,7 +2003,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getAwsCredentialsId_returnAwsCredentialsId_whenAwsCredentialsIdAndCredentialsIdPresent() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                null, null, "A", "B", null, null, null,
+                null, "A", "B", null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -2017,7 +2017,7 @@ public class EC2FleetCloudTest {
     @Test
     public void getCloudStatusInterval_returnCloudStatusInterval() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 1, true, false, "-1", false
@@ -2029,7 +2029,7 @@ public class EC2FleetCloudTest {
     @Test
     public void create_numExecutorsLessThenOneShouldUpgradedToOne() {
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 0, true, false, "-1", false
@@ -2042,7 +2042,7 @@ public class EC2FleetCloudTest {
     public void hasUnlimitedUsesForNodes_shouldReturnTrueWhenUnlimited() {
         final int maxTotalUses = -1;
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 0, true, false, String.valueOf(maxTotalUses), false
@@ -2055,7 +2055,7 @@ public class EC2FleetCloudTest {
     public void hasUnlimitedUsesForNodes_shouldReturnDefaultTrueForNull() {
         final String maxTotalUses = null;
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 0, true, false, maxTotalUses, false
@@ -2068,7 +2068,7 @@ public class EC2FleetCloudTest {
     public void hasUnlimitedUsesForNodes_shouldReturnDefaultTrueForEmptyString() {
         final String maxTotalUses = "";
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 0, true, false, maxTotalUses, false
@@ -2081,7 +2081,7 @@ public class EC2FleetCloudTest {
     public void hasUnlimitedUsesForNodes_shouldReturnFalseWhenLimited() {
         final int maxTotalUses = 5;
         EC2FleetCloud ec2FleetCloud = new EC2FleetCloud(
-                "CloudName", null, null, null, null, null, null,
+                "CloudName", null, null, null, null, null,
                 null, null, null, false,
                 false, null, 0, 1, 0,
                 0, true, false, String.valueOf(maxTotalUses), false

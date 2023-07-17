@@ -6,16 +6,14 @@ import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.DescribeInstancesRequest;
 import com.amazonaws.services.ec2.model.DescribeInstancesResult;
+import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsRequest;
+import com.amazonaws.services.ec2.model.DescribeSpotFleetRequestsResult;
 import com.amazonaws.services.ec2.model.Instance;
 import com.amazonaws.services.ec2.model.InstanceState;
 import com.amazonaws.services.ec2.model.InstanceStateName;
 import com.amazonaws.services.ec2.model.Reservation;
 import com.amazonaws.services.ec2.model.TerminateInstancesRequest;
 import com.amazonaws.services.ec2.model.TerminateInstancesResult;
-import com.gargoylesoftware.htmlunit.html.HtmlForm;
-import com.gargoylesoftware.htmlunit.html.HtmlFormUtil;
-import com.gargoylesoftware.htmlunit.html.HtmlPage;
-import com.gargoylesoftware.htmlunit.html.HtmlTextInput;
 import hudson.model.Node;
 import hudson.model.queue.QueueTaskFuture;
 import org.junit.Before;
@@ -28,11 +26,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
-import java.util.stream.Collectors;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
 import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -78,7 +72,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldTerminateNodeMarkedForDeletion() throws Exception {
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 0, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         // Set initial jenkins nodes
@@ -102,7 +96,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldTerminateExcessCapacity() throws Exception {
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 0, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         // Set initial jenkins nodes
@@ -141,14 +135,14 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
         List<QueueTaskFuture> rs = enqueTask(10, 90);
         triggerSuggestReviewNow();
 
-        EC2FleetCloud cloud = new EC2FleetCloud(null, "null", "credId", null, "region",
+        EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 2, 2, 0, 1, false, true, "-1", false, 0, 0, false, 999, false);
         j.jenkins.clouds.add(cloud);
         cloud.update();
 
         assertAtLeastOneNode();
-        cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 0, 0, 1, false, true, "-1", false, 0, 0, false, 99, false);
         j.jenkins.clouds.clear();
@@ -174,7 +168,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldTerminateIdleNodesAfterIdleTimeout() throws Exception {
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 2, 0, 1, false, true, "-1", false, 0, 0, false, 99, false);
         j.jenkins.clouds.add(cloud);
@@ -205,7 +199,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldNotTerminateBelowMinSize() throws Exception {
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 2, 5, 0, 1, false, true, "-1", false, 0, 0, false, 30, false);
         j.jenkins.clouds.add(cloud);
@@ -229,7 +223,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
 
     @Test
     public void shouldNotTerminateBelowMinSpareSize() throws Exception {
-        final EC2FleetCloud cloud = new EC2FleetCloud(null, null, "credId", null, "region",
+        final EC2FleetCloud cloud = new EC2FleetCloud(null, "credId", null, "region",
                 null, "fId", "momo", null, new LocalComputerConnector(j), false, false,
                 1, 0, 5, 2, 1, false, true, "-1", false, 0, 0, false, 30, false);
         j.jenkins.clouds.add(cloud);
@@ -258,7 +252,7 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
         final int maxTotalUses = 2;
         final int taskSleepTime = 1;
 
-        EC2FleetCloud cloud = spy(new EC2FleetCloud("testCloud", null, "credId", null, "region",
+        EC2FleetCloud cloud = spy(new EC2FleetCloud("testCloud", "credId", null, "region",
                 null, "fId", label, null, new LocalComputerConnector(j), false, false,
                 0, 0, 10, 0, 1, false, true,
                 String.valueOf(maxTotalUses), true, 0, 0, false, 10, false));
@@ -276,75 +270,5 @@ public class EC2RetentionStrategyIntegrationTest extends IntegrationTest {
         final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
         verify((amazonEC2)).terminateInstances(argument.capture());
         assertTrue(argument.getAllValues().get(0).getInstanceIds().containsAll(Arrays.asList("i-1", "i-2")));
-    }
-
-    @Test
-    public void shouldTerminateNodeForMaxTotalUsesIsExhaustedAfterConfigChange() throws Exception {
-        final String label = "momo";
-        final int numTasks = 4; // schedule a total of 4 tasks, 2 per instance
-        final int maxTotalUses = 2;
-        final long scheduleInterval = 5;
-        final int cloudStatusInternalSec = 60; // increase to trigger update manually
-        final int taskSleepTime = 1;
-
-        EC2FleetCloud cloud = new EC2FleetCloud("testCloud", null, "credId", null, "region",
-                null, "fId", label, null, new LocalComputerConnector(j), false, false,
-                0, 0, 10, 0, 1, false, true,
-                String.valueOf(maxTotalUses), true, 0, 0, false,
-                cloudStatusInternalSec, false);
-        j.jenkins.clouds.add(cloud);
-        cloud.update();
-        assertAtLeastOneNode();
-
-        // initiate a config change after a node exhausts maxTotalUses and is scheduled for termination
-        EC2FleetCloud newCloud;
-        String nodeToTerminate = null;
-        int taskCount = 0;
-        final List<QueueTaskFuture> tasks = new ArrayList<>();
-        for (int i=numTasks; i > 0 ; i--) {
-            // get first node that is about to get terminated, before scheduling more tasks
-            List<String> nodesWithExhaustedMaxUses = j.jenkins.getNodes().stream()
-                    .filter(n -> ((EC2FleetNode)n).getUsesRemaining() == 0)
-                    .map(Node::getNodeName)
-                    .collect(Collectors.toList());
-            if (nodesWithExhaustedMaxUses != null && !nodesWithExhaustedMaxUses.isEmpty()) {
-                nodeToTerminate = nodesWithExhaustedMaxUses.get(0);
-                break; // we have what we want, stop scheduling more tasks - exit loop and verify
-            }
-
-            // schedule a task
-            tasks.addAll(enqueTask(1, taskSleepTime));
-            taskCount++;
-            System.out.println("scheduled task " + taskCount + ", waiting " + scheduleInterval + " sec");
-            Thread.sleep(TimeUnit.SECONDS.toMillis(scheduleInterval));
-        }
-        waitJobSuccessfulExecution(tasks); // wait for scheduleToTerminate to be called
-
-        assertNotNull(nodeToTerminate);
-
-        // make a config change after a node is scheduled to terminate
-        HtmlPage page = j.createWebClient().goTo("configureClouds");
-        HtmlForm form = page.getFormByName("config");
-        System.out.println(form.toString());
-        System.out.println(IntegrationTest.getElementsByNameWithoutJdk(page, "_.name"));
-        ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("new-name");
-        HtmlFormUtil.submit(form);
-
-        // verify cloud object was re-created, leading to lost state (i.e. instanceIdsToTerminate)
-        newCloud = (EC2FleetCloud) j.jenkins.clouds.get(0);
-        assertNotSame(cloud, newCloud);
-        assertTrue(cloud.getInstanceIdsToTerminate().containsKey(nodeToTerminate));
-        assertTrue(newCloud.getInstanceIdsToTerminate().isEmpty());
-
-        // initiate check to schedule instance to terminate again
-        EC2FleetNode node = (EC2FleetNode) j.jenkins.getNode(nodeToTerminate);
-        node.getRetentionStrategy().check(node.toComputer());
-
-        // terminate scheduled instances
-        cloud.update();
-
-        final ArgumentCaptor<TerminateInstancesRequest> argument = ArgumentCaptor.forClass(TerminateInstancesRequest.class);
-        verify((amazonEC2)).terminateInstances(argument.capture());
-        assertTrue(argument.getAllValues().get(0).getInstanceIds().contains(nodeToTerminate));
     }
 }

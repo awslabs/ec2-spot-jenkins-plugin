@@ -7,7 +7,6 @@ import hudson.model.ExecutorListener;
 import hudson.model.Node;
 import hudson.model.Queue;
 import hudson.slaves.RetentionStrategy;
-import hudson.slaves.SlaveComputer;
 
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;

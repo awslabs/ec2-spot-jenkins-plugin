@@ -1,7 +1,6 @@
 package com.amazon.jenkins.ec2fleet;
 
 import hudson.model.Queue;
-import hudson.model.Slave;
 import jenkins.model.Jenkins;
 import org.junit.Assert;
 import org.junit.Before;
@@ -12,6 +11,7 @@ import org.powermock.api.mockito.PowerMockito;
 import org.powermock.core.classloader.annotations.PrepareForTest;
 import org.powermock.modules.junit4.PowerMockRunner;
 
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.when;
 
@@ -20,16 +20,13 @@ import static org.mockito.Mockito.when;
 public class EC2FleetNodeComputerTest {
 
     @Mock
-    private Slave agent;
+    private EC2FleetNode agent;
 
     @Mock
     private Jenkins jenkins;
 
     @Mock
     private Queue queue;
-
-    @Mock
-    private EC2FleetCloud cloud;
 
     @Before
     public void before() {
@@ -42,23 +39,25 @@ public class EC2FleetNodeComputerTest {
     }
 
     @Test
-    public void getDisplayName_should_be_ok_with_init_null_cloud() {
-        EC2FleetNodeComputer computer = spy(new EC2FleetNodeComputer(agent, "a", null));
-        Assert.assertEquals("unknown fleet a", computer.getDisplayName());
-    }
+    public void getDisplayName_returns_node_display_name_for_default_maxTotalUses() {
+        when(agent.getDisplayName()).thenReturn("a n");
+        when(agent.getMaxTotalUses()).thenReturn(-1);
 
-    @Test
-    public void getDisplayName_should_be_ok_with_set_null_cloud() {
-        EC2FleetNodeComputer computer = spy(new EC2FleetNodeComputer(agent, "a", cloud));
-        computer.setCloud(null);
-        Assert.assertEquals("unknown fleet a", computer.getDisplayName());
-    }
+        EC2FleetNodeComputer computer = spy(new EC2FleetNodeComputer(agent));
+        doReturn(agent).when(computer).getNode();
 
-    @Test
-    public void getDisplayName_returns_node_display_name() {
-        when(cloud.getDisplayName()).thenReturn("a");
-        EC2FleetNodeComputer computer = spy(new EC2FleetNodeComputer(agent, "n", cloud));
         Assert.assertEquals("a n", computer.getDisplayName());
+    }
+
+    @Test
+    public void getDisplayName_returns_builds_left_for_non_default_maxTotalUses() {
+        when(agent.getDisplayName()).thenReturn("a n");
+        when(agent.getMaxTotalUses()).thenReturn(1);
+
+        EC2FleetNodeComputer computer = spy(new EC2FleetNodeComputer(agent));
+        doReturn(agent).when(computer).getNode();
+
+        Assert.assertEquals("a n Builds left: 1 ", computer.getDisplayName());
     }
 
 }
