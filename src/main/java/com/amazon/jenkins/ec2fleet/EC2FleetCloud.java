@@ -163,7 +163,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
     private transient AtomicInteger plannedNodeCounter = new AtomicInteger(1);
 
     @DataBoundConstructor
-    public EC2FleetCloud(final String name,
+    public EC2FleetCloud(@Nonnull final String name,
                          final String awsCredentialsId,
                          final @Deprecated String credentialsId,
                          final String region,
@@ -188,7 +188,7 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
                          final boolean scaleExecutorsByWeight,
                          final Integer cloudStatusIntervalSec,
                          final boolean noDelayProvision) {
-        super(StringUtils.isBlank(name) ? DEFAULT_FLEET_CLOUD_ID : name);
+        super(name);
         init();
         this.credentialsId = credentialsId;
         this.awsCredentialsId = awsCredentialsId;
@@ -958,12 +958,18 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             return FormValidation.error("Maximum Total Uses must be greater or equal to -1");
         }
 
-        public FormValidation doCheckName(@QueryParameter final String name) {
+        public FormValidation doCheckName(@QueryParameter final String name, @QueryParameter final String isNewCloud) {
             try {
                 Jenkins.checkGoodName(name);
             } catch (Failure e) {
                 return FormValidation.error(e.getMessage());
             }
+
+            // check if name is unique
+            if (Boolean.valueOf(isNewCloud) && !CloudNames.isUnique(name)) {
+                return FormValidation.error("Please choose a unique name. Existing clouds: " + Jenkins.get().clouds.stream().map(c -> c.name).collect(Collectors.joining(",")));
+            }
+
             return FormValidation.ok();
         }
 
@@ -985,6 +991,10 @@ public class EC2FleetCloud extends AbstractEC2FleetCloud {
             }
 
             return model;
+        }
+
+        public String getDefaultCloudName() {
+            return CloudNames.generateUnique(DEFAULT_FLEET_CLOUD_ID);
         }
 
         public FormValidation doCheckFleet(@QueryParameter final String fleet) {

@@ -4,8 +4,10 @@ import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import hudson.plugins.sshslaves.SSHConnector;
 import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
+import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -32,6 +34,14 @@ public class EC2FleetCloudConfigurationAsCodeTest {
         EC2Fleets.setGet(ec2Fleet);
         when(ec2Fleet.getState(anyString(), anyString(), nullable(String.class), anyString()))
                 .thenReturn(new FleetStateStats("", 2, FleetStateStats.State.active(), new HashSet<>(Arrays.asList("i-1", "i-2")), Collections.emptyMap()));
+    }
+
+    @Test
+    @ConfiguredWithCode(
+            value = "EC2FleetCloud/name-required-configuration-as-code.yml",
+            expected = ConfiguratorException.class,
+            message = "error configuring 'jenkins' with class io.jenkins.plugins.casc.core.JenkinsConfigurator configurator")
+    public void configurationWithNullName_shouldFail() {
     }
 
     @Test

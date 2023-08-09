@@ -119,7 +119,7 @@ public class UiIntegrationTest {
 
     @Test
     public void shouldShowInConfigurationClouds() throws IOException, SAXException {
-        Cloud cloud = new EC2FleetCloud(null, null, null, null, null, null,
+        Cloud cloud = new EC2FleetCloud("TestCloud", null, null, null, null, null,
                 null, null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
@@ -157,14 +157,14 @@ public class UiIntegrationTest {
 
     @Test
     public void shouldShowMultipleCloudsWithDefaultName() throws IOException, SAXException {
-        Cloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
+        Cloud cloud1 = new EC2FleetCloud("TestCloud1", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
-        Cloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
+        Cloud cloud2 = new EC2FleetCloud("TestCloud2", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
@@ -175,20 +175,20 @@ public class UiIntegrationTest {
 
         List<DomElement> elementsByName = IntegrationTest.getElementsByNameWithoutJdk(page, "_.name");
         assertEquals(2, elementsByName.size());
-        assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(0)).getText());
-        assertEquals("FleetCloud", ((HtmlTextInput) elementsByName.get(1)).getText());
+        assertEquals("TestCloud1", ((HtmlTextInput) elementsByName.get(0)).getText());
+        assertEquals("TestCloud2", ((HtmlTextInput) elementsByName.get(1)).getText());
     }
 
     @Test
     public void shouldUpdateProperCloudWhenMultiple() throws Exception {
-        EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
+        EC2FleetCloud cloud1 = new EC2FleetCloud("TestCloud1", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
-        EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
+        EC2FleetCloud cloud2 = new EC2FleetCloud("TestCloud2", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
@@ -198,17 +198,16 @@ public class UiIntegrationTest {
         HtmlPage page = j.createWebClient().goTo("configureClouds");
         HtmlForm form = page.getFormByName("config");
 
-        ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.name").get(0)).setText("a");
+        ((HtmlTextInput) IntegrationTest.getElementsByNameWithoutJdk(page, "_.labelString").get(0)).setText("new-label");
 
         HtmlFormUtil.submit(form);
 
-        assertEquals("a", j.jenkins.clouds.get(0).name);
-        assertEquals("FleetCloud", j.jenkins.clouds.get(1).name);
-    }
+        assertEquals("new-label", ((EC2FleetCloud)j.jenkins.clouds.get(0)).getLabelString());
+        assertEquals("label", ((EC2FleetCloud)j.jenkins.clouds.get(1)).getLabelString());    }
 
     @Test
     public void shouldContainRegionValueInRegionLabel() throws IOException, SAXException {
-        EC2FleetCloud cloud1 = new EC2FleetCloud(null, "uh", null, null, null,
+        EC2FleetCloud cloud1 = new EC2FleetCloud("TestCloud", "uh", null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
@@ -230,7 +229,7 @@ public class UiIntegrationTest {
     public void shouldHaveRegionCodeAndRegionDescriptionInRegionLabel() throws IOException, SAXException {
         final String regionName = "us-east-1";
         final String displayName = "us-east-1 US East (N. Virginia)";
-        EC2FleetCloud cloud1 = new EC2FleetCloud(null, "uh", null, null, null,
+        EC2FleetCloud cloud1 = new EC2FleetCloud("TestCloud", "uh", null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
@@ -255,23 +254,24 @@ public class UiIntegrationTest {
         }
     }
 
+    // Note: multiple clouds with same name can be created via JCasC only.
     @Test
     public void shouldGetFirstWhenMultipleCloudWithSameName() {
-        EC2FleetCloud cloud1 = new EC2FleetCloud(null, null, null, null, null,
+        EC2FleetCloud cloud1 = new EC2FleetCloud("TestCloud", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud1);
 
-        EC2FleetCloud cloud2 = new EC2FleetCloud(null, null, null, null, null,
+        EC2FleetCloud cloud2 = new EC2FleetCloud("TestCloud", null, null, null, null,
                 null, "label", null, null, false, false,
                 0, 0, 0, 0, 0, true, false,
                 "-1", false, 0, 0, false,
                 10, false);
         j.jenkins.clouds.add(cloud2);
 
-        assertSame(cloud1, j.jenkins.getCloud("FleetCloud"));
+        assertSame(cloud1, j.jenkins.getCloud("TestCloud"));
     }
 
     @Test
