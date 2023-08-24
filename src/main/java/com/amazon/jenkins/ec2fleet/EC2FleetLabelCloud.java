@@ -63,7 +63,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
     public static final String EC2_INSTANCE_TAG_NAMESPACE = "ec2-fleet-plugin";
     public static final String EC2_INSTANCE_CLOUD_NAME_TAG = EC2_INSTANCE_TAG_NAMESPACE + ":cloud-name";
 
-    public static final String DEFAULT_FLEET_CLOUD_ID = "FleetCloudLabel";
+    public static final String BASE_DEFAULT_FLEET_CLOUD_ID = "FleetCloudLabel";
 
     public static final int DEFAULT_CLOUD_STATUS_INTERVAL_SEC = 10;
 
@@ -125,7 +125,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
                               final Integer cloudStatusIntervalSec,
                               final boolean noDelayProvision,
                               final String ec2KeyPairName) {
-        super(name);
+        super(StringUtils.isNotBlank(name) ? name : CloudNames.generateUnique(BASE_DEFAULT_FLEET_CLOUD_ID));
         init();
         this.awsCredentialsId = awsCredentialsId;
         this.region = region;
@@ -873,7 +873,7 @@ public class EC2FleetLabelCloud extends AbstractEC2FleetCloud {
         }
 
         public String getDefaultCloudName() {
-            return CloudNames.generateUnique(DEFAULT_FLEET_CLOUD_ID);
+            return CloudNames.generateUnique(BASE_DEFAULT_FLEET_CLOUD_ID);
         }
 
         public Boolean isExistingCloudNameDuplicated(@QueryParameter final String name) { return CloudNames.isDuplicated(name); }

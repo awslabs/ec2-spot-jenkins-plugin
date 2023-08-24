@@ -4,10 +4,10 @@ import com.amazon.jenkins.ec2fleet.fleet.EC2Fleet;
 import com.amazon.jenkins.ec2fleet.fleet.EC2Fleets;
 import hudson.plugins.sshslaves.SSHConnector;
 import hudson.plugins.sshslaves.verifiers.NonVerifyingKeyVerificationStrategy;
+import hudson.slaves.Cloud;
 import io.jenkins.plugins.casc.ConfiguratorException;
 import io.jenkins.plugins.casc.misc.ConfiguredWithCode;
 import io.jenkins.plugins.casc.misc.JenkinsConfiguredWithCodeRule;
-import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -18,6 +18,7 @@ import java.util.Collections;
 import java.util.HashSet;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.mock;
@@ -102,5 +103,17 @@ public class EC2FleetCloudConfigurationAsCodeTest {
 
         SSHConnector sshConnector = (SSHConnector) cloud.getComputerConnector();
         assertEquals(sshConnector.getSshHostKeyVerificationStrategy().getClass(), NonVerifyingKeyVerificationStrategy.class);
+    }
+
+    @Test
+    @ConfiguredWithCode("EC2FleetCloud/empty-name-configuration-as-code.yml")
+    public void configurationWithEmptyName_shouldUseDefault() {
+        assertEquals(jenkinsRule.jenkins.clouds.size(), 3);
+
+        for (EC2FleetCloud cloud : jenkinsRule.jenkins.clouds.getAll(EC2FleetCloud.class)){
+
+            assertTrue(cloud.name.startsWith(EC2FleetCloud.BASE_DEFAULT_FLEET_CLOUD_ID));
+            assertEquals(("FleetCloud".length() + CloudNames.SUFFIX_LENGTH + 1), cloud.name.length());
+        }
     }
 }
