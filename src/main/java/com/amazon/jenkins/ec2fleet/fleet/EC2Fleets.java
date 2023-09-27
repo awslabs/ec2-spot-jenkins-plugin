@@ -12,6 +12,9 @@ public class EC2Fleets {
     private static final String EC2_SPOT_FLEET_PREFIX = "sfr-";
     private static final EC2SpotFleet EC2_SPOT_FLEET = new EC2SpotFleet();
 
+    private static final String EC2_CREATE_FLEET_PREFIX = "fleet-";
+    private static final EC2CreateFleet EC2_CREATE_FLEET = new EC2CreateFleet();
+
     private static EC2Fleet GET = null;
 
     private EC2Fleets() {
@@ -30,6 +33,8 @@ public class EC2Fleets {
 
         if (isEC2Fleet(id)) {
             return EC2_SPOT_FLEET;
+        } else if(isEC2CreateFleet(id)) {
+            return EC2_CREATE_FLEET;
         } else {
             return new AutoScalingGroupFleet();
         }
@@ -37,6 +42,10 @@ public class EC2Fleets {
 
     public static boolean isEC2Fleet(final String fleet) {
         return StringUtils.startsWith(fleet, EC2_SPOT_FLEET_PREFIX);
+    }
+
+    public static boolean isEC2CreateFleet(final String fleet) {
+        return StringUtils.startsWith(fleet, EC2_CREATE_FLEET_PREFIX);
     }
 
     // Visible for testing
