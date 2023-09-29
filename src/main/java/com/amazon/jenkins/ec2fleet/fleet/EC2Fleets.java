@@ -24,6 +24,7 @@ public class EC2Fleets {
     public static List<EC2Fleet> all() {
         return Arrays.asList(
                 new EC2SpotFleet(),
+                new EC2CreateFleet(),
                 new AutoScalingGroupFleet()
         );
     }
