@@ -4,8 +4,6 @@ import com.amazon.jenkins.ec2fleet.FleetStateStats;
 import com.amazon.jenkins.ec2fleet.Registry;
 import com.amazonaws.services.ec2.AmazonEC2;
 import com.amazonaws.services.ec2.model.*;
-import com.amazonaws.services.elasticmapreduce.model.InstanceFleetConfig;
-import com.amazonaws.services.elasticmapreduce.model.InstanceTypeConfig;
 import hudson.util.ListBoxModel;
 import org.springframework.util.ObjectUtils;
 
@@ -85,20 +83,22 @@ public class EC2CreateFleet implements EC2Fleet {
             throw new IllegalStateException("Fleet " + id + " can't be described");
 
         final FleetData fleetData = fleet.getFleets().get(0);
-        final FleetLaunchTemplateConfig templateConfigs = fleetData.getLaunchTemplateConfigs().get(0);
+        final List<FleetLaunchTemplateConfig> templateConfigs = fleetData.getLaunchTemplateConfigs();
 
         // Index configured instance types by weight:
         final Map<String, Double> instanceTypeWeights = new HashMap<>();
-        for (FleetLaunchTemplateOverrides launchOverrides : templateConfigs.getOverrides()) {
-            final String instanceType = launchOverrides.getInstanceType();
-            if (instanceType == null) continue;
+        for (FleetLaunchTemplateConfig templateConfig : templateConfigs) {
+            for (FleetLaunchTemplateOverrides launchOverrides : templateConfig.getOverrides()) {
+                final String instanceType = launchOverrides.getInstanceType();
+                if (instanceType == null) continue;
 
-            final Double instanceWeight = launchOverrides.getWeightedCapacity();
-            final Double existingWeight = instanceTypeWeights.get(instanceType);
-            if (instanceWeight == null || (existingWeight != null && existingWeight > instanceWeight)) {
-                continue;
+                final Double instanceWeight = launchOverrides.getWeightedCapacity();
+                final Double existingWeight = instanceTypeWeights.get(instanceType);
+                if (instanceWeight == null || (existingWeight != null && existingWeight > instanceWeight)) {
+                    continue;
+                }
+                instanceTypeWeights.put(instanceType, instanceWeight);
             }
-            instanceTypeWeights.put(instanceType, instanceWeight);
         }
 
         return new FleetStateStats(id,
